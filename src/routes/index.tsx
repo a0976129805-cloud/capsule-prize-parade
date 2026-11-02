@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { checkAdmin, unlockAdmin, lockAdmin } from "@/lib/admin-gate.functions";
 import {
   Sparkles, Package, ShoppingBag, Settings, RotateCw, CheckCircle2, ArrowLeft,
   Plus, Trash2, Edit3, Check, User, X, Truck,
@@ -222,7 +224,7 @@ function App() {
           </div>
         )}
 
-        {tab === "admin" && <Admin machines={machines} setMachines={setMachines} orders={orders} setOrders={setOrders} flash={flash} />}
+        {tab === "admin" && <AdminGate><Admin machines={machines} setMachines={setMachines} orders={orders} setOrders={setOrders} flash={flash} /></AdminGate>}
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card">
@@ -355,5 +357,38 @@ function Admin({ machines, setMachines, orders, setOrders, flash }: {
       ))}
       <button onClick={() => { if (confirm("重置所有資料？")) { localStorage.removeItem("gacha-app-v1"); location.reload(); } }} className="flex w-full items-center justify-center gap-1 text-xs text-muted-foreground"><X className="h-3 w-3" /> 重置示範資料</button>
     </div>
+  );
+}
+
+function AdminGate({ children }: { children: React.ReactNode }) {
+  const check = useServerFn(checkAdmin);
+  const unlock = useServerFn(unlockAdmin);
+  const lock = useServerFn(lockAdmin);
+  const [state, setState] = useState<"loading" | "locked" | "open">("loading");
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { check().then((r) => setState(r.ok ? "open" : "locked")).catch(() => setState("locked")); }, []);
+  if (state === "loading") return <p className="py-10 text-center text-sm text-muted-foreground">載入中…</p>;
+  if (state === "open") return (
+    <div>
+      <div className="mb-3 flex justify-end">
+        <button onClick={async () => { await lock(); setState("locked"); }} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">登出後台</button>
+      </div>
+      {children}
+    </div>
+  );
+  return (
+    <form onSubmit={async (e) => { e.preventDefault(); setBusy(true); setErr(false);
+        const r = await unlock({ data: { password: pw } }).catch(() => ({ ok: false }));
+        setBusy(false); if (r.ok) { setPw(""); setState("open"); } else setErr(true); }}
+      className="mx-auto mt-8 max-w-xs space-y-3 rounded-2xl border-2 border-border bg-card p-5 text-center">
+      <Settings className="mx-auto h-8 w-8 text-primary" />
+      <p className="font-extrabold">管理者後台</p>
+      <input type="password" autoComplete="current-password" placeholder="請輸入後台密碼" value={pw} onChange={(e) => setPw(e.target.value)}
+        className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm" />
+      {err && <p className="text-xs text-destructive">密碼錯誤</p>}
+      <button disabled={busy || !pw} className="w-full rounded-full bg-primary py-2.5 font-bold text-primary-foreground disabled:opacity-50">進入後台</button>
+    </form>
   );
 }
