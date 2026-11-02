@@ -59,6 +59,7 @@ function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<VaultItem[] | null>(null);
+  const [phase, setPhase] = useState<null | "spin" | "drop" | "open">(null);
   const [ship, setShip] = useState<Shipping>(emptyShip);
   const [toast, setToast] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -80,6 +81,9 @@ function App() {
   const draw = (count: number) => {
     if (!selected || selected.totalStock < count || selected.items.length === 0) return flash("庫存不足！");
     setSpinning(true);
+    setPhase("spin");
+    setTimeout(() => setPhase("drop"), 1600);
+    setTimeout(() => setPhase("open"), 2500);
     setTimeout(() => {
       const drawn: VaultItem[] = Array.from({ length: count }, () => {
         const it: Item = selected.items[Math.floor(Math.random() * selected.items.length)]!;
@@ -88,8 +92,9 @@ function App() {
       setVault((p) => [...p, ...drawn]);
       setMachines((p) => p.map((m) => (m.id === selected.id ? { ...m, totalStock: m.totalStock - count } : m)));
       setSpinning(false);
+      setPhase(null);
       setResult(drawn);
-    }, 1500);
+    }, 3200);
   };
 
   const checkout = (e: React.FormEvent) => {
