@@ -80,7 +80,7 @@ function App() {
     setSpinning(true);
     setTimeout(() => {
       const drawn: VaultItem[] = Array.from({ length: count }, () => {
-        const it: Item = selected.items[Math.floor(Math.random() * selected.items.length)];
+        const it: Item = selected.items[Math.floor(Math.random() * selected.items.length)]!;
         return { ...it, vaultId: Date.now() + Math.random().toString(36).slice(2), machineTitle: selected.title, drawnAt: new Date().toLocaleDateString() };
       });
       setVault((p) => [...p, ...drawn]);
