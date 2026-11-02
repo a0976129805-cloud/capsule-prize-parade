@@ -272,7 +272,7 @@ function App() {
               </div>
             )}
           </div>
-          <p className="mt-12 text-lg font-extrabold text-primary-foreground">
+          <p className="mt-28 text-lg font-extrabold text-primary-foreground">
             {phase === "spin" ? "ガチャガチャ…🎶" : phase === "drop" ? "コロン！" : "パカッ！✨"}
           </p>
         </div>
