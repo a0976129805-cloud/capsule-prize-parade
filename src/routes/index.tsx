@@ -59,6 +59,7 @@ function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<VaultItem[] | null>(null);
+  const [phase, setPhase] = useState<null | "spin" | "drop" | "open">(null);
   const [ship, setShip] = useState<Shipping>(emptyShip);
   const [toast, setToast] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -80,6 +81,9 @@ function App() {
   const draw = (count: number) => {
     if (!selected || selected.totalStock < count || selected.items.length === 0) return flash("庫存不足！");
     setSpinning(true);
+    setPhase("spin");
+    setTimeout(() => setPhase("drop"), 1600);
+    setTimeout(() => setPhase("open"), 2500);
     setTimeout(() => {
       const drawn: VaultItem[] = Array.from({ length: count }, () => {
         const it: Item = selected.items[Math.floor(Math.random() * selected.items.length)]!;
@@ -88,8 +92,9 @@ function App() {
       setVault((p) => [...p, ...drawn]);
       setMachines((p) => p.map((m) => (m.id === selected.id ? { ...m, totalStock: m.totalStock - count } : m)));
       setSpinning(false);
+      setPhase(null);
       setResult(drawn);
-    }, 1500);
+    }, 3200);
   };
 
   const checkout = (e: React.FormEvent) => {
@@ -238,6 +243,40 @@ function App() {
           ))}
         </div>
       </nav>
+
+      {phase && (
+        <div className="bg-overlay fixed inset-0 z-50 flex flex-col items-center justify-center p-4">
+          <div className="relative flex flex-col items-center">
+            {/* globe */}
+            <div className={`gm-globe relative h-44 w-44 overflow-hidden rounded-full border-[6px] border-card bg-card/30 shadow-xl ${phase === "spin" ? "gm-shake" : ""}`}>
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <span key={i} className={`gm-ball absolute h-10 w-10 rounded-full border-2 border-card ${phase === "spin" ? "gm-tumble" : ""}`}
+                  style={{ left: `${10 + (i % 4) * 22}%`, top: `${40 + Math.floor(i / 4) * 25}%`, animationDelay: `${i * 0.08}s`, background: `linear-gradient(180deg, var(--${["primary", "accent", "secondary", "chart-2"][i % 4]}) 50%, var(--card) 50%)` }} />
+              ))}
+            </div>
+            {/* body */}
+            <div className="-mt-3 flex h-32 w-52 flex-col items-center justify-between rounded-3xl bg-primary px-4 py-3 shadow-xl">
+              <div className={`flex h-14 w-14 items-center justify-center rounded-full border-4 border-card bg-accent ${phase === "spin" ? "gm-handle" : ""}`}>
+                <div className="h-2 w-10 rounded-full bg-card" />
+              </div>
+              <div className="h-8 w-16 rounded-t-xl bg-foreground/70" />
+            </div>
+            {/* capsule */}
+            {phase !== "spin" && (
+              <div className={`absolute bottom-[-10px] ${phase === "drop" ? "gm-drop" : "gm-burst"}`}>
+                <div className="relative h-16 w-16">
+                  <div className={`absolute inset-x-0 top-0 h-8 rounded-t-full border-2 border-card bg-primary ${phase === "open" ? "gm-top-open" : ""}`} />
+                  <div className={`absolute inset-x-0 bottom-0 h-8 rounded-b-full border-2 border-card bg-card ${phase === "open" ? "gm-bot-open" : ""}`} />
+                  {phase === "open" && <div className="gm-flash absolute inset-[-40px] rounded-full bg-accent/80 blur-xl" />}
+                </div>
+              </div>
+            )}
+          </div>
+          <p className="mt-28 text-lg font-extrabold text-primary-foreground">
+            {phase === "spin" ? "ガチャガチャ…🎶" : phase === "drop" ? "コロン！" : "パカッ！✨"}
+          </p>
+        </div>
+      )}
 
       {result && (
         <div className="bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
