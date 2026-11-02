@@ -260,7 +260,7 @@ function App() {
         </div>
       )}
 
-      {toast && <div className="fixed inset-x-4 top-16 z-50 mx-auto max-w-sm rounded-xl bg-foreground px-4 py-3 text-center text-sm text-background shadow-lg">{toast}</div>}
+      {toast && <div className="animate-toast fixed inset-x-4 bottom-24 z-40 mx-auto max-w-sm rounded-xl bg-foreground px-4 py-3 text-center text-sm text-background shadow-lg">{toast}</div>}
     </div>
   );
 }
