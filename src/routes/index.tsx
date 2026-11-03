@@ -3,56 +3,42 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAdmin, unlockAdmin, lockAdmin } from "@/lib/admin-gate.functions";
 import {
+  listMachines, drawPrizes, createOrder, myOrders, adminOrders, adminSetOrderStatus, adminSaveMachine, adminDeleteMachine,
+  type Machine, type VaultItem, type Shipping, type Order,
+} from "@/lib/gacha.functions";
+import { ordersToCsv } from "@/lib/csv";
+import { supabase } from "@/integrations/supabase/client";
+import catLogo from "@/assets/cat-logo.png";
+import {
   Sparkles, Package, ShoppingBag, Settings, RotateCw, CheckCircle2, ArrowLeft,
-  Plus, Trash2, Edit3, Check, User, X, Truck,
+  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "日系線上扭蛋機｜轉蛋・倉庫・7-11 賣貨便寄送" },
-      { name: "description", content: "手機就能玩的日系線上扭蛋機，抽中商品存入倉庫，一鍵 7-11 賣貨便貨到付款。" },
-      { property: "og:title", content: "日系線上扭蛋機" },
+      { title: "奶油貓貓 ガチャ扭蛋屋｜線上扭蛋・7-11 賣貨便寄送" },
+      { name: "description", content: "奶油貓貓的日系線上扭蛋屋，手機就能轉蛋，抽中商品存入倉庫，7-11 賣貨便貨到付款。" },
+      { property: "og:title", content: "奶油貓貓 ガチャ扭蛋屋" },
       { property: "og:description", content: "線上轉蛋、倉庫收藏、7-11 賣貨便貨到付款寄送。" },
     ],
   }),
   component: App,
 });
 
-type Item = { id: string; name: string; image: string };
-type Machine = { id: string; title: string; price: number; totalStock: number; coverImage: string; status: string; items: Item[] };
-type VaultItem = Item & { vaultId: string; machineTitle: string; drawnAt: string };
-type Shipping = { name: string; phone: string; storeName: string; storeCode: string };
-type Order = { id: string; user: string; items: VaultItem[]; shipping: Shipping; createdAt: string; status: string };
-
-const u = (id: string, w = 300) => `https://images.unsplash.com/${id}?auto=format&fit=crop&q=80&w=${w}`;
-
-const DEFAULT_MACHINES: Machine[] = [
-  { id: "m1", title: "【CAP'in GALLERY】 miffy Glint Series", price: 150, totalStock: 50, coverImage: u("photo-1566576912321-d58ddd7a6088", 600), status: "熱烈販售中",
-    items: [
-      { id: "i1", name: "米飛兔 珍珠白公仔", image: u("photo-1566576912321-d58ddd7a6088") },
-      { id: "i2", name: "米飛兔 經典黃公仔", image: u("photo-1558679908-541bcf1249ff") },
-      { id: "i3", name: "米飛兔 薄荷綠公仔", image: u("photo-1535572290543-960a8046f5af") },
-    ] },
-  { id: "m2", title: "夢之蠟筆王國 飾品配件專用輯", price: 100, totalStock: 30, coverImage: u("photo-1535572290543-960a8046f5af", 600), status: "熱烈販售中",
-    items: [
-      { id: "i4", name: "魔法杖 吊飾", image: u("photo-1535572290543-960a8046f5af") },
-      { id: "i5", name: "香水瓶 鑰匙圈", image: u("photo-1566576912321-d58ddd7a6088") },
-    ] },
-  { id: "m3", title: "rom&nd 縮小版甜心彩妝模型 Vol.3", price: 100, totalStock: 15, coverImage: u("photo-1522337360788-8b13dee7a37e", 600), status: "少量即將完售",
-    items: [
-      { id: "i6", name: "迷你唇釉 01 號", image: u("photo-1522337360788-8b13dee7a37e") },
-      { id: "i7", name: "迷你氣墊粉餅", image: u("photo-1558679908-541bcf1249ff") },
-    ] },
-];
-
 const ORDER_STATUSES = ["待出貨", "已出貨", "已取貨", "已取消"];
-const STORAGE = "gacha-app-v1";
+const STORAGE = "gacha-vault-v2";
 const emptyShip: Shipping = { name: "", phone: "", storeName: "", storeCode: "" };
+
+function getDeviceId() {
+  let id = localStorage.getItem("gacha-device");
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem("gacha-device", id); }
+  return id;
+}
 
 function App() {
   const [tab, setTab] = useState<"home" | "vault" | "orders" | "admin">("home");
-  const [machines, setMachines] = useState<Machine[]>(DEFAULT_MACHINES);
+  const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [vault, setVault] = useState<VaultItem[]>([]);
   const [picked, setPicked] = useState<string[]>([]);
@@ -63,64 +49,66 @@ function App() {
   const [ship, setShip] = useState<Shipping>(emptyShip);
   const [toast, setToast] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const fetchMachines = useServerFn(listMachines);
+  const doDraw = useServerFn(drawPrizes);
+  const doOrder = useServerFn(createOrder);
+  const fetchMine = useServerFn(myOrders);
+
+  const reloadMachines = () => fetchMachines().then(setMachines).catch(() => {});
+  const reloadOrders = () => fetchMine({ data: { deviceId: getDeviceId() } }).then(setOrders).catch(() => {});
 
   useEffect(() => {
-    try {
-      const s = JSON.parse(localStorage.getItem(STORAGE) || "null");
-      if (s) { setMachines(s.machines); setVault(s.vault); setOrders(s.orders); }
-    } catch {}
+    try { const s = JSON.parse(localStorage.getItem(STORAGE) || "null"); if (Array.isArray(s)) setVault(s); } catch {}
     setLoaded(true);
+    reloadMachines(); reloadOrders();
+    const ch = supabase.channel(`gacha-${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => reloadMachines())
+      .on("postgres_changes", { event: "*", schema: "public", table: "prizes" }, () => reloadMachines())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, []);
-  useEffect(() => {
-    if (loaded) localStorage.setItem(STORAGE, JSON.stringify({ machines, vault, orders }));
-  }, [machines, vault, orders, loaded]);
+  useEffect(() => { if (loaded) localStorage.setItem(STORAGE, JSON.stringify(vault)); }, [vault, loaded]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2500); };
   const selected = machines.find((m) => m.id === selectedId) || null;
 
-  const draw = (count: number) => {
+  const draw = async (count: number) => {
     if (!selected || selected.totalStock < count || selected.items.length === 0) return flash("庫存不足！");
     setSpinning(true);
     setPhase("spin");
-    setTimeout(() => setPhase("drop"), 1600);
-    setTimeout(() => setPhase("open"), 2500);
-    setTimeout(() => {
-      const drawn: VaultItem[] = Array.from({ length: count }, () => {
-        const it: Item = selected.items[Math.floor(Math.random() * selected.items.length)]!;
-        return { ...it, vaultId: Date.now() + Math.random().toString(36).slice(2), machineTitle: selected.title, drawnAt: new Date().toLocaleDateString() };
-      });
-      setVault((p) => [...p, ...drawn]);
-      setMachines((p) => p.map((m) => (m.id === selected.id ? { ...m, totalStock: m.totalStock - count } : m)));
-      setSpinning(false);
-      setPhase(null);
-      setResult(drawn);
-    }, 3200);
+    const req = doDraw({ data: { machineId: selected.id, count } }).catch(() => ({ ok: false as const, error: "連線失敗，請再試一次" }));
+    const t1 = setTimeout(() => setPhase("drop"), 1600);
+    const t2 = setTimeout(() => setPhase("open"), 2500);
+    const [r] = await Promise.all([req, new Promise((res) => setTimeout(res, 3200))]);
+    if (!r.ok) { clearTimeout(t1); clearTimeout(t2); setSpinning(false); setPhase(null); reloadMachines(); return flash(r.error); }
+    const drawn: VaultItem[] = r.items.map((it) => ({ ...it, vaultId: Date.now() + Math.random().toString(36).slice(2), machineTitle: selected.title, price: selected.price, drawnAt: new Date().toLocaleDateString() }));
+    setVault((p) => [...p, ...drawn]);
+    reloadMachines();
+    setSpinning(false);
+    setPhase(null);
+    setResult(drawn);
   };
 
-  const checkout = (e: React.FormEvent) => {
+  const checkout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (picked.length === 0) return flash("請先選擇要寄出的商品！");
-    const order: Order = {
-      id: "ORD-" + Date.now().toString().slice(-6), user: "徐詠竣 (LINE)",
-      items: vault.filter((v) => picked.includes(v.vaultId)), shipping: { ...ship },
-      createdAt: new Date().toLocaleString(), status: "待出貨",
-    };
-    setOrders((p) => [order, ...p]);
+    try {
+      await doOrder({ data: { deviceId: getDeviceId(), items: vault.filter((v) => picked.includes(v.vaultId)), shipping: { ...ship } } });
+    } catch { return flash("送出失敗，請再試一次"); }
     setVault((p) => p.filter((v) => !picked.includes(v.vaultId)));
     setPicked([]); setShip(emptyShip);
-    flash("🎉 出貨申請已送出！已產生 7-11 賣貨便貨到付款單據");
+    await reloadOrders();
+    flash("🎉 出貨申請已送出！");
     setTab("orders");
   };
 
   return (
     <div className="min-h-screen pb-24 text-foreground">
       <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-md">
-        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-md items-center px-4 py-2">
           <div className="flex items-center gap-2 font-extrabold">
-            <Sparkles className="h-5 w-5" /> ガチャ扭蛋屋
-          </div>
-          <div className="flex items-center gap-1 rounded-full bg-primary-foreground/20 px-3 py-1 text-xs">
-            <User className="h-3.5 w-3.5" /> 徐詠竣
+            <img src={catLogo} alt="奶油貓貓" width={40} height={40} className="h-10 w-10 rounded-full bg-card object-contain p-0.5" />
+            奶油貓貓 🐈‍⬛ ガチャ扭蛋屋
           </div>
         </div>
       </header>
@@ -132,21 +120,22 @@ function App() {
               <p className="text-lg font-extrabold">今日のガチャ ✨</p>
               <p className="text-sm">抽中商品自動存入倉庫，集滿再一起寄！</p>
             </div>
+            {machines.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">載入中…</p>}
+            <div className="grid grid-cols-2 gap-3">
             {machines.map((m) => (
-              <button key={m.id} onClick={() => setSelectedId(m.id)} className="block w-full overflow-hidden rounded-2xl border-2 border-border bg-card text-left shadow-sm transition active:scale-[.98]">
-                <div className="relative aspect-[16/9] bg-muted">
-                  <img src={m.coverImage} alt={m.title} className="h-full w-full object-cover" />
-                  <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">{m.status}</span>
+              <button key={m.id} onClick={() => setSelectedId(m.id)} className="flex flex-col overflow-hidden rounded-2xl border-2 border-border bg-card text-left shadow-sm transition active:scale-[.97]">
+                <div className="relative aspect-square bg-muted">
+                  <img src={m.coverImage} alt={m.title} loading="lazy" className="h-full w-full object-cover" />
+                  <span className="absolute left-1.5 top-1.5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">{m.totalStock <= 0 ? "已完售" : m.status}</span>
+                  <span className="absolute bottom-1.5 right-1.5 rounded-full bg-card/90 px-2 py-0.5 text-sm font-extrabold text-primary">NT${m.price}</span>
                 </div>
-                <div className="flex items-end justify-between p-3">
-                  <div>
-                    <p className="font-bold leading-tight">{m.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">剩餘 {m.totalStock} 顆</p>
-                  </div>
-                  <p className="text-lg font-extrabold text-primary">NT${m.price}</p>
+                <div className="p-2">
+                  <p className="line-clamp-2 text-xs font-bold leading-snug">{m.title}</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">剩餘 {m.totalStock} 顆</p>
                 </div>
               </button>
             ))}
+            </div>
           </div>
         )}
 
@@ -229,7 +218,7 @@ function App() {
           </div>
         )}
 
-        {tab === "admin" && <AdminGate><Admin machines={machines} setMachines={setMachines} orders={orders} setOrders={setOrders} flash={flash} /></AdminGate>}
+        {tab === "admin" && <AdminGate><Admin machines={machines} reload={reloadMachines} flash={flash} /></AdminGate>}
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card">
@@ -312,7 +301,7 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
   return (
     <div className="rounded-2xl border-2 border-border bg-card p-4 text-sm">
       <div className="flex justify-between"><span className="font-extrabold">{o.id}</span><span className="rounded-full bg-secondary px-2 text-xs font-bold text-secondary-foreground">{o.status}</span></div>
-      <p className="text-xs text-muted-foreground">{o.createdAt}・{o.user}</p>
+      <p className="text-xs text-muted-foreground">{o.createdAt}・總金額 NT${o.total}</p>
       <p className="mt-2">{o.items.map((i) => i.name).join("、")}</p>
       <p className="mt-1 text-xs text-muted-foreground">7-11 {o.shipping.storeName}（{o.shipping.storeCode}）・{o.shipping.name} {o.shipping.phone}</p>
       {children}
@@ -320,19 +309,35 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
   );
 }
 
-function Admin({ machines, setMachines, orders, setOrders, flash }: {
-  machines: Machine[]; setMachines: React.Dispatch<React.SetStateAction<Machine[]>>;
-  orders: Order[]; setOrders: React.Dispatch<React.SetStateAction<Order[]>>; flash: (m: string) => void;
-}) {
+function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () => void; flash: (m: string) => void }) {
   const [view, setView] = useState<"machines" | "orders">("machines");
   const [edit, setEdit] = useState<Machine | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const getOrders = useServerFn(adminOrders);
+  const setStatus = useServerFn(adminSetOrderStatus);
+  const saveM = useServerFn(adminSaveMachine);
+  const delM = useServerFn(adminDeleteMachine);
+  const loadOrders = () => getOrders().then(setOrders).catch(() => flash("讀取訂單失敗"));
+  useEffect(() => { loadOrders(); }, []);
   const field = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
 
-  const save = () => {
+  const save = async () => {
     if (!edit) return;
     if (!edit.title.trim()) return flash("請輸入名稱");
-    setMachines((p) => (p.some((m) => m.id === edit.id) ? p.map((m) => (m.id === edit.id ? edit : m)) : [...p, edit]));
-    setEdit(null); flash("已儲存");
+    try { await saveM({ data: edit }); } catch { return flash("儲存失敗"); }
+    setEdit(null); reload(); flash("已儲存");
+  };
+
+  const exportCsv = () => {
+    const list = orders.filter((o) => o.status === "待出貨");
+    const rows = list.length ? list : orders;
+    if (!rows.length) return flash("尚無訂單可匯出");
+    const blob = new Blob([ordersToCsv(rows)], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `7-11賣貨便_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   if (edit) return (
@@ -357,7 +362,7 @@ function Admin({ machines, setMachines, orders, setOrders, flash }: {
           <button onClick={() => setEdit({ ...edit, items: edit.items.filter((_, j) => j !== idx) })} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
         </div>
       ))}
-      <button onClick={() => setEdit({ ...edit, items: [...edit.items, { id: "i" + Date.now(), name: "", image: "" }] })} className="flex w-full items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border py-2 text-sm"><Plus className="h-4 w-4" /> 新增商品</button>
+      <button onClick={() => setEdit({ ...edit, items: [...edit.items, { id: "i" + Date.now() + Math.random().toString(36).slice(2, 6), name: "", image: "" }] })} className="flex w-full items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border py-2 text-sm"><Plus className="h-4 w-4" /> 新增商品</button>
       <button onClick={save} className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-3 font-extrabold text-primary-foreground"><Check className="h-4 w-4" /> 儲存</button>
     </div>
   );
@@ -380,21 +385,29 @@ function Admin({ machines, setMachines, orders, setOrders, flash }: {
               <img src={m.coverImage} alt="" className="h-14 w-14 rounded-xl bg-muted object-cover" />
               <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{m.title}</p><p className="text-xs text-muted-foreground">NT${m.price}・庫存 {m.totalStock}・{m.items.length} 款</p></div>
               <button onClick={() => setEdit(m)} className="p-2 text-muted-foreground"><Edit3 className="h-4 w-4" /></button>
-              <button onClick={() => confirm("確定刪除？") && setMachines((p) => p.filter((x) => x.id !== m.id))} className="p-2 text-destructive"><Trash2 className="h-4 w-4" /></button>
+              <button onClick={async () => { if (confirm("確定刪除？")) { await delM({ data: { id: m.id } }); reload(); } }} className="p-2 text-destructive"><Trash2 className="h-4 w-4" /></button>
             </div>
           ))}
         </>
-      ) : orders.length === 0 ? <Empty text="尚無訂單" /> : orders.map((o) => (
-        <OrderCard key={o.id} o={o}>
-          <div className="mt-3 flex flex-wrap gap-1">
-            {ORDER_STATUSES.map((s) => (
-              <button key={s} onClick={() => setOrders((p) => p.map((x) => (x.id === o.id ? { ...x, status: s } : x)))}
-                className={`rounded-full px-3 py-1 text-xs font-bold ${o.status === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{s}</button>
-            ))}
+      ) : (
+        <>
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <button onClick={exportCsv} className="flex items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Download className="h-4 w-4" /> 匯出 7-11 賣貨便 CSV</button>
+            <button onClick={loadOrders} aria-label="重新整理" className="rounded-full bg-muted px-3 text-muted-foreground"><RefreshCw className="h-4 w-4" /></button>
           </div>
-        </OrderCard>
-      ))}
-      <button onClick={() => { if (confirm("重置所有資料？")) { localStorage.removeItem("gacha-app-v1"); location.reload(); } }} className="flex w-full items-center justify-center gap-1 text-xs text-muted-foreground"><X className="h-3 w-3" /> 重置示範資料</button>
+          <p className="text-center text-xs text-muted-foreground">匯出「待出貨」訂單（無待出貨時匯出全部）</p>
+          {orders.length === 0 ? <Empty text="尚無訂單" /> : orders.map((o) => (
+            <OrderCard key={o.id} o={o}>
+              <div className="mt-3 flex flex-wrap gap-1">
+                {ORDER_STATUSES.map((s) => (
+                  <button key={s} onClick={async () => { setOrders((p) => p.map((x) => (x.id === o.id ? { ...x, status: s } : x))); await setStatus({ data: { id: o.id, status: s } }).catch(() => flash("更新失敗")); }}
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${o.status === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{s}</button>
+                ))}
+              </div>
+            </OrderCard>
+          ))}
+        </>
+      )}
     </div>
   );
 }
