@@ -218,7 +218,7 @@ function App() {
           </div>
         )}
 
-        {tab === "admin" && <AdminGate><Admin machines={machines} setMachines={setMachines} orders={orders} setOrders={setOrders} flash={flash} /></AdminGate>}
+        {tab === "admin" && <AdminGate><Admin machines={machines} reload={reloadMachines} flash={flash} /></AdminGate>}
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card">
@@ -301,7 +301,7 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
   return (
     <div className="rounded-2xl border-2 border-border bg-card p-4 text-sm">
       <div className="flex justify-between"><span className="font-extrabold">{o.id}</span><span className="rounded-full bg-secondary px-2 text-xs font-bold text-secondary-foreground">{o.status}</span></div>
-      <p className="text-xs text-muted-foreground">{o.createdAt}・{o.user}</p>
+      <p className="text-xs text-muted-foreground">{o.createdAt}・總金額 NT${o.total}</p>
       <p className="mt-2">{o.items.map((i) => i.name).join("、")}</p>
       <p className="mt-1 text-xs text-muted-foreground">7-11 {o.shipping.storeName}（{o.shipping.storeCode}）・{o.shipping.name} {o.shipping.phone}</p>
       {children}
@@ -309,19 +309,35 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
   );
 }
 
-function Admin({ machines, setMachines, orders, setOrders, flash }: {
-  machines: Machine[]; setMachines: React.Dispatch<React.SetStateAction<Machine[]>>;
-  orders: Order[]; setOrders: React.Dispatch<React.SetStateAction<Order[]>>; flash: (m: string) => void;
-}) {
+function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () => void; flash: (m: string) => void }) {
   const [view, setView] = useState<"machines" | "orders">("machines");
   const [edit, setEdit] = useState<Machine | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const getOrders = useServerFn(adminOrders);
+  const setStatus = useServerFn(adminSetOrderStatus);
+  const saveM = useServerFn(adminSaveMachine);
+  const delM = useServerFn(adminDeleteMachine);
+  const loadOrders = () => getOrders().then(setOrders).catch(() => flash("讀取訂單失敗"));
+  useEffect(() => { loadOrders(); }, []);
   const field = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
 
-  const save = () => {
+  const save = async () => {
     if (!edit) return;
     if (!edit.title.trim()) return flash("請輸入名稱");
-    setMachines((p) => (p.some((m) => m.id === edit.id) ? p.map((m) => (m.id === edit.id ? edit : m)) : [...p, edit]));
-    setEdit(null); flash("已儲存");
+    try { await saveM({ data: edit }); } catch { return flash("儲存失敗"); }
+    setEdit(null); reload(); flash("已儲存");
+  };
+
+  const exportCsv = () => {
+    const list = orders.filter((o) => o.status === "待出貨");
+    const rows = list.length ? list : orders;
+    if (!rows.length) return flash("尚無訂單可匯出");
+    const blob = new Blob([ordersToCsv(rows)], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `7-11賣貨便_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   if (edit) return (
@@ -346,7 +362,7 @@ function Admin({ machines, setMachines, orders, setOrders, flash }: {
           <button onClick={() => setEdit({ ...edit, items: edit.items.filter((_, j) => j !== idx) })} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
         </div>
       ))}
-      <button onClick={() => setEdit({ ...edit, items: [...edit.items, { id: "i" + Date.now(), name: "", image: "" }] })} className="flex w-full items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border py-2 text-sm"><Plus className="h-4 w-4" /> 新增商品</button>
+      <button onClick={() => setEdit({ ...edit, items: [...edit.items, { id: "i" + Date.now() + Math.random().toString(36).slice(2, 6), name: "", image: "" }] })} className="flex w-full items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border py-2 text-sm"><Plus className="h-4 w-4" /> 新增商品</button>
       <button onClick={save} className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-3 font-extrabold text-primary-foreground"><Check className="h-4 w-4" /> 儲存</button>
     </div>
   );
@@ -369,21 +385,29 @@ function Admin({ machines, setMachines, orders, setOrders, flash }: {
               <img src={m.coverImage} alt="" className="h-14 w-14 rounded-xl bg-muted object-cover" />
               <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{m.title}</p><p className="text-xs text-muted-foreground">NT${m.price}・庫存 {m.totalStock}・{m.items.length} 款</p></div>
               <button onClick={() => setEdit(m)} className="p-2 text-muted-foreground"><Edit3 className="h-4 w-4" /></button>
-              <button onClick={() => confirm("確定刪除？") && setMachines((p) => p.filter((x) => x.id !== m.id))} className="p-2 text-destructive"><Trash2 className="h-4 w-4" /></button>
+              <button onClick={async () => { if (confirm("確定刪除？")) { await delM({ data: { id: m.id } }); reload(); } }} className="p-2 text-destructive"><Trash2 className="h-4 w-4" /></button>
             </div>
           ))}
         </>
-      ) : orders.length === 0 ? <Empty text="尚無訂單" /> : orders.map((o) => (
-        <OrderCard key={o.id} o={o}>
-          <div className="mt-3 flex flex-wrap gap-1">
-            {ORDER_STATUSES.map((s) => (
-              <button key={s} onClick={() => setOrders((p) => p.map((x) => (x.id === o.id ? { ...x, status: s } : x)))}
-                className={`rounded-full px-3 py-1 text-xs font-bold ${o.status === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{s}</button>
-            ))}
+      ) : (
+        <>
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <button onClick={exportCsv} className="flex items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Download className="h-4 w-4" /> 匯出 7-11 賣貨便 CSV</button>
+            <button onClick={loadOrders} aria-label="重新整理" className="rounded-full bg-muted px-3 text-muted-foreground"><RefreshCw className="h-4 w-4" /></button>
           </div>
-        </OrderCard>
-      ))}
-      <button onClick={() => { if (confirm("重置所有資料？")) { localStorage.removeItem("gacha-app-v1"); location.reload(); } }} className="flex w-full items-center justify-center gap-1 text-xs text-muted-foreground"><X className="h-3 w-3" /> 重置示範資料</button>
+          <p className="text-center text-xs text-muted-foreground">匯出「待出貨」訂單（無待出貨時匯出全部）</p>
+          {orders.length === 0 ? <Empty text="尚無訂單" /> : orders.map((o) => (
+            <OrderCard key={o.id} o={o}>
+              <div className="mt-3 flex flex-wrap gap-1">
+                {ORDER_STATUSES.map((s) => (
+                  <button key={s} onClick={async () => { setOrders((p) => p.map((x) => (x.id === o.id ? { ...x, status: s } : x))); await setStatus({ data: { id: o.id, status: s } }).catch(() => flash("更新失敗")); }}
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${o.status === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{s}</button>
+                ))}
+              </div>
+            </OrderCard>
+          ))}
+        </>
+      )}
     </div>
   );
 }
