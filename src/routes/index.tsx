@@ -105,12 +105,10 @@ function App() {
   return (
     <div className="min-h-screen pb-24 text-foreground">
       <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-md">
-        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-md items-center px-4 py-2">
           <div className="flex items-center gap-2 font-extrabold">
-            <Sparkles className="h-5 w-5" /> ガチャ扭蛋屋
-          </div>
-          <div className="flex items-center gap-1 rounded-full bg-primary-foreground/20 px-3 py-1 text-xs">
-            <User className="h-3.5 w-3.5" /> 徐詠竣
+            <img src={catLogo} alt="奶油貓貓" width={40} height={40} className="h-10 w-10 rounded-full bg-card object-contain p-0.5" />
+            奶油貓貓 🐈‍⬛ ガチャ扭蛋屋
           </div>
         </div>
       </header>
