@@ -122,21 +122,22 @@ function App() {
               <p className="text-lg font-extrabold">今日のガチャ ✨</p>
               <p className="text-sm">抽中商品自動存入倉庫，集滿再一起寄！</p>
             </div>
+            {machines.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">載入中…</p>}
+            <div className="grid grid-cols-2 gap-3">
             {machines.map((m) => (
-              <button key={m.id} onClick={() => setSelectedId(m.id)} className="block w-full overflow-hidden rounded-2xl border-2 border-border bg-card text-left shadow-sm transition active:scale-[.98]">
-                <div className="relative aspect-[16/9] bg-muted">
-                  <img src={m.coverImage} alt={m.title} className="h-full w-full object-cover" />
-                  <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">{m.status}</span>
+              <button key={m.id} onClick={() => setSelectedId(m.id)} className="flex flex-col overflow-hidden rounded-2xl border-2 border-border bg-card text-left shadow-sm transition active:scale-[.97]">
+                <div className="relative aspect-square bg-muted">
+                  <img src={m.coverImage} alt={m.title} loading="lazy" className="h-full w-full object-cover" />
+                  <span className="absolute left-1.5 top-1.5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">{m.totalStock <= 0 ? "已完售" : m.status}</span>
+                  <span className="absolute bottom-1.5 right-1.5 rounded-full bg-card/90 px-2 py-0.5 text-sm font-extrabold text-primary">NT${m.price}</span>
                 </div>
-                <div className="flex items-end justify-between p-3">
-                  <div>
-                    <p className="font-bold leading-tight">{m.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">剩餘 {m.totalStock} 顆</p>
-                  </div>
-                  <p className="text-lg font-extrabold text-primary">NT${m.price}</p>
+                <div className="p-2">
+                  <p className="line-clamp-2 text-xs font-bold leading-snug">{m.title}</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">剩餘 {m.totalStock} 顆</p>
                 </div>
               </button>
             ))}
+            </div>
           </div>
         )}
 
