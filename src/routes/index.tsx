@@ -3,56 +3,42 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAdmin, unlockAdmin, lockAdmin } from "@/lib/admin-gate.functions";
 import {
+  listMachines, drawPrizes, createOrder, myOrders, adminOrders, adminSetOrderStatus, adminSaveMachine, adminDeleteMachine,
+  type Machine, type VaultItem, type Shipping, type Order,
+} from "@/lib/gacha.functions";
+import { ordersToCsv } from "@/lib/csv";
+import { supabase } from "@/integrations/supabase/client";
+import catLogo from "@/assets/cat-logo.png";
+import {
   Sparkles, Package, ShoppingBag, Settings, RotateCw, CheckCircle2, ArrowLeft,
-  Plus, Trash2, Edit3, Check, User, X, Truck,
+  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "日系線上扭蛋機｜轉蛋・倉庫・7-11 賣貨便寄送" },
-      { name: "description", content: "手機就能玩的日系線上扭蛋機，抽中商品存入倉庫，一鍵 7-11 賣貨便貨到付款。" },
-      { property: "og:title", content: "日系線上扭蛋機" },
+      { title: "奶油貓貓 ガチャ扭蛋屋｜線上扭蛋・7-11 賣貨便寄送" },
+      { name: "description", content: "奶油貓貓的日系線上扭蛋屋，手機就能轉蛋，抽中商品存入倉庫，7-11 賣貨便貨到付款。" },
+      { property: "og:title", content: "奶油貓貓 ガチャ扭蛋屋" },
       { property: "og:description", content: "線上轉蛋、倉庫收藏、7-11 賣貨便貨到付款寄送。" },
     ],
   }),
   component: App,
 });
 
-type Item = { id: string; name: string; image: string };
-type Machine = { id: string; title: string; price: number; totalStock: number; coverImage: string; status: string; items: Item[] };
-type VaultItem = Item & { vaultId: string; machineTitle: string; drawnAt: string };
-type Shipping = { name: string; phone: string; storeName: string; storeCode: string };
-type Order = { id: string; user: string; items: VaultItem[]; shipping: Shipping; createdAt: string; status: string };
-
-const u = (id: string, w = 300) => `https://images.unsplash.com/${id}?auto=format&fit=crop&q=80&w=${w}`;
-
-const DEFAULT_MACHINES: Machine[] = [
-  { id: "m1", title: "【CAP'in GALLERY】 miffy Glint Series", price: 150, totalStock: 50, coverImage: u("photo-1566576912321-d58ddd7a6088", 600), status: "熱烈販售中",
-    items: [
-      { id: "i1", name: "米飛兔 珍珠白公仔", image: u("photo-1566576912321-d58ddd7a6088") },
-      { id: "i2", name: "米飛兔 經典黃公仔", image: u("photo-1558679908-541bcf1249ff") },
-      { id: "i3", name: "米飛兔 薄荷綠公仔", image: u("photo-1535572290543-960a8046f5af") },
-    ] },
-  { id: "m2", title: "夢之蠟筆王國 飾品配件專用輯", price: 100, totalStock: 30, coverImage: u("photo-1535572290543-960a8046f5af", 600), status: "熱烈販售中",
-    items: [
-      { id: "i4", name: "魔法杖 吊飾", image: u("photo-1535572290543-960a8046f5af") },
-      { id: "i5", name: "香水瓶 鑰匙圈", image: u("photo-1566576912321-d58ddd7a6088") },
-    ] },
-  { id: "m3", title: "rom&nd 縮小版甜心彩妝模型 Vol.3", price: 100, totalStock: 15, coverImage: u("photo-1522337360788-8b13dee7a37e", 600), status: "少量即將完售",
-    items: [
-      { id: "i6", name: "迷你唇釉 01 號", image: u("photo-1522337360788-8b13dee7a37e") },
-      { id: "i7", name: "迷你氣墊粉餅", image: u("photo-1558679908-541bcf1249ff") },
-    ] },
-];
-
 const ORDER_STATUSES = ["待出貨", "已出貨", "已取貨", "已取消"];
-const STORAGE = "gacha-app-v1";
+const STORAGE = "gacha-vault-v2";
 const emptyShip: Shipping = { name: "", phone: "", storeName: "", storeCode: "" };
+
+function getDeviceId() {
+  let id = localStorage.getItem("gacha-device");
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem("gacha-device", id); }
+  return id;
+}
 
 function App() {
   const [tab, setTab] = useState<"home" | "vault" | "orders" | "admin">("home");
-  const [machines, setMachines] = useState<Machine[]>(DEFAULT_MACHINES);
+  const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [vault, setVault] = useState<VaultItem[]>([]);
   const [picked, setPicked] = useState<string[]>([]);
@@ -63,52 +49,56 @@ function App() {
   const [ship, setShip] = useState<Shipping>(emptyShip);
   const [toast, setToast] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const fetchMachines = useServerFn(listMachines);
+  const doDraw = useServerFn(drawPrizes);
+  const doOrder = useServerFn(createOrder);
+  const fetchMine = useServerFn(myOrders);
+
+  const reloadMachines = () => fetchMachines().then(setMachines).catch(() => {});
+  const reloadOrders = () => fetchMine({ data: { deviceId: getDeviceId() } }).then(setOrders).catch(() => {});
 
   useEffect(() => {
-    try {
-      const s = JSON.parse(localStorage.getItem(STORAGE) || "null");
-      if (s) { setMachines(s.machines); setVault(s.vault); setOrders(s.orders); }
-    } catch {}
+    try { const s = JSON.parse(localStorage.getItem(STORAGE) || "null"); if (Array.isArray(s)) setVault(s); } catch {}
     setLoaded(true);
+    reloadMachines(); reloadOrders();
+    const ch = supabase.channel(`gacha-${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => reloadMachines())
+      .on("postgres_changes", { event: "*", schema: "public", table: "prizes" }, () => reloadMachines())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, []);
-  useEffect(() => {
-    if (loaded) localStorage.setItem(STORAGE, JSON.stringify({ machines, vault, orders }));
-  }, [machines, vault, orders, loaded]);
+  useEffect(() => { if (loaded) localStorage.setItem(STORAGE, JSON.stringify(vault)); }, [vault, loaded]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2500); };
   const selected = machines.find((m) => m.id === selectedId) || null;
 
-  const draw = (count: number) => {
+  const draw = async (count: number) => {
     if (!selected || selected.totalStock < count || selected.items.length === 0) return flash("庫存不足！");
     setSpinning(true);
     setPhase("spin");
-    setTimeout(() => setPhase("drop"), 1600);
-    setTimeout(() => setPhase("open"), 2500);
-    setTimeout(() => {
-      const drawn: VaultItem[] = Array.from({ length: count }, () => {
-        const it: Item = selected.items[Math.floor(Math.random() * selected.items.length)]!;
-        return { ...it, vaultId: Date.now() + Math.random().toString(36).slice(2), machineTitle: selected.title, drawnAt: new Date().toLocaleDateString() };
-      });
-      setVault((p) => [...p, ...drawn]);
-      setMachines((p) => p.map((m) => (m.id === selected.id ? { ...m, totalStock: m.totalStock - count } : m)));
-      setSpinning(false);
-      setPhase(null);
-      setResult(drawn);
-    }, 3200);
+    const req = doDraw({ data: { machineId: selected.id, count } }).catch(() => ({ ok: false as const, error: "連線失敗，請再試一次" }));
+    const t1 = setTimeout(() => setPhase("drop"), 1600);
+    const t2 = setTimeout(() => setPhase("open"), 2500);
+    const [r] = await Promise.all([req, new Promise((res) => setTimeout(res, 3200))]);
+    if (!r.ok) { clearTimeout(t1); clearTimeout(t2); setSpinning(false); setPhase(null); reloadMachines(); return flash(r.error); }
+    const drawn: VaultItem[] = r.items.map((it) => ({ ...it, vaultId: Date.now() + Math.random().toString(36).slice(2), machineTitle: selected.title, price: selected.price, drawnAt: new Date().toLocaleDateString() }));
+    setVault((p) => [...p, ...drawn]);
+    reloadMachines();
+    setSpinning(false);
+    setPhase(null);
+    setResult(drawn);
   };
 
-  const checkout = (e: React.FormEvent) => {
+  const checkout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (picked.length === 0) return flash("請先選擇要寄出的商品！");
-    const order: Order = {
-      id: "ORD-" + Date.now().toString().slice(-6), user: "徐詠竣 (LINE)",
-      items: vault.filter((v) => picked.includes(v.vaultId)), shipping: { ...ship },
-      createdAt: new Date().toLocaleString(), status: "待出貨",
-    };
-    setOrders((p) => [order, ...p]);
+    try {
+      await doOrder({ data: { deviceId: getDeviceId(), items: vault.filter((v) => picked.includes(v.vaultId)), shipping: { ...ship } } });
+    } catch { return flash("送出失敗，請再試一次"); }
     setVault((p) => p.filter((v) => !picked.includes(v.vaultId)));
     setPicked([]); setShip(emptyShip);
-    flash("🎉 出貨申請已送出！已產生 7-11 賣貨便貨到付款單據");
+    await reloadOrders();
+    flash("🎉 出貨申請已送出！");
     setTab("orders");
   };
 
