@@ -14,13 +14,116 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: string
+          items: Json
+          ship_name: string
+          ship_phone: string
+          status: string
+          store_code: string
+          store_name: string
+          total: number
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          id: string
+          items?: Json
+          ship_name: string
+          ship_phone: string
+          status?: string
+          store_code: string
+          store_name: string
+          total?: number
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: string
+          items?: Json
+          ship_name?: string
+          ship_phone?: string
+          status?: string
+          store_code?: string
+          store_name?: string
+          total?: number
+        }
+        Relationships: []
+      }
+      prizes: {
+        Row: {
+          id: string
+          image: string
+          name: string
+          product_id: string
+          sort: number
+        }
+        Insert: {
+          id: string
+          image?: string
+          name?: string
+          product_id: string
+          sort?: number
+        }
+        Update: {
+          id?: string
+          image?: string
+          name?: string
+          product_id?: string
+          sort?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prizes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          cover_image: string
+          created_at: string
+          id: string
+          price: number
+          sort: number
+          status: string
+          title: string
+          total_stock: number
+        }
+        Insert: {
+          cover_image?: string
+          created_at?: string
+          id: string
+          price?: number
+          sort?: number
+          status?: string
+          title: string
+          total_stock?: number
+        }
+        Update: {
+          cover_image?: string
+          created_at?: string
+          id?: string
+          price?: number
+          sort?: number
+          status?: string
+          title?: string
+          total_stock?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      take_stock: { Args: { _n: number; _product: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
