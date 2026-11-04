@@ -13,7 +13,7 @@ describe("shipping rules", () => {
   it("711 export has 18 columns with total and store code", () => {
     const rows = build711Rows([{ total: 938, shipping: { name: "王", phone: "0912345678", email: "a@b.c", storeName: "鑫台北", storeCode: "123456" } }], emptySeller);
     expect(rows[2]).toHaveLength(18);
-    expect(rows[2][10]).toBe(938);
-    expect(rows[2][12]).toBe("123456");
+    expect(rows[2]![10]).toBe(938);
+    expect(rows[2]![12]).toBe("123456");
   });
 });
