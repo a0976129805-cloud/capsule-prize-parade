@@ -3,15 +3,18 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAdmin, unlockAdmin, lockAdmin } from "@/lib/admin-gate.functions";
 import {
-  listMachines, drawPrizes, createOrder, myOrders, adminOrders, adminSetOrderStatus, adminSaveMachine, adminDeleteMachine,
+  listMachines, drawPrizes, createOrder, myOrders, myVault, adminOrders, adminSetOrderStatus, adminSaveMachine, adminDeleteMachine,
+  adminGetSeller, adminSaveSeller,
   type Machine, type VaultItem, type Shipping, type Order,
 } from "@/lib/gacha.functions";
-import { ordersToCsv } from "@/lib/csv";
+import { searchStores, getTowns, CITIES, type Store } from "@/lib/stores.functions";
+import { orderTotal, daysLeft, FREE_SHIP_COUNT, SHIP_FEE, VAULT_DAYS } from "@/lib/shipping";
+import { build711Rows, missingSeller, emptySeller, type Seller } from "@/lib/export711";
 import { supabase } from "@/integrations/supabase/client";
 import catLogo from "@/assets/cat-logo.png";
 import {
-  Sparkles, Package, ShoppingBag, Settings, RotateCw, CheckCircle2, ArrowLeft,
-  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw,
+  Sparkles, Package, ShoppingBag, Settings, RotateCw, ArrowLeft,
+  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -21,14 +24,16 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "奶油貓貓的日系線上扭蛋屋，手機就能轉蛋，抽中商品存入倉庫，7-11 賣貨便貨到付款。" },
       { property: "og:title", content: "奶油貓貓 ガチャ扭蛋屋" },
       { property: "og:description", content: "線上轉蛋、倉庫收藏、7-11 賣貨便貨到付款寄送。" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: App,
 });
 
 const ORDER_STATUSES = ["待出貨", "已出貨", "已取貨", "已取消"];
-const STORAGE = "gacha-vault-v2";
-const emptyShip: Shipping = { name: "", phone: "", storeName: "", storeCode: "" };
+const emptyShip: Shipping = { name: "", phone: "", email: "", storeName: "", storeCode: "" };
+const RULES = `倉庫商品可免費寄放 ${VAULT_DAYS} 天，申請出貨時須將倉內所有扭蛋一併結帳寄出，無法單獨挑選放棄。逾期未出貨將自動清除並取消資格。`;
 
 function getDeviceId() {
   let id = localStorage.getItem("gacha-device");
@@ -41,62 +46,67 @@ function App() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [vault, setVault] = useState<VaultItem[]>([]);
-  const [picked, setPicked] = useState<string[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<VaultItem[] | null>(null);
   const [phase, setPhase] = useState<null | "spin" | "drop" | "open">(null);
   const [ship, setShip] = useState<Shipping>(emptyShip);
+  const [agreed, setAgreed] = useState(false);
+  const [picker, setPicker] = useState(false);
+  const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
   const fetchMachines = useServerFn(listMachines);
   const doDraw = useServerFn(drawPrizes);
   const doOrder = useServerFn(createOrder);
   const fetchMine = useServerFn(myOrders);
+  const fetchVault = useServerFn(myVault);
 
   const reloadMachines = () => fetchMachines().then(setMachines).catch(() => {});
   const reloadOrders = () => fetchMine({ data: { deviceId: getDeviceId() } }).then(setOrders).catch(() => {});
+  const reloadVault = () => fetchVault({ data: { deviceId: getDeviceId() } }).then(setVault).catch(() => {});
 
   useEffect(() => {
-    try { const s = JSON.parse(localStorage.getItem(STORAGE) || "null"); if (Array.isArray(s)) setVault(s); } catch {}
-    setLoaded(true);
-    reloadMachines(); reloadOrders();
+    reloadMachines(); reloadOrders(); reloadVault();
     const ch = supabase.channel(`gacha-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => reloadMachines())
       .on("postgres_changes", { event: "*", schema: "public", table: "prizes" }, () => reloadMachines())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
-  useEffect(() => { if (loaded) localStorage.setItem(STORAGE, JSON.stringify(vault)); }, [vault, loaded]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2500); };
   const selected = machines.find((m) => m.id === selectedId) || null;
+  const sum = orderTotal(vault.map((v) => v.price));
+  const oldest = vault[0]?.drawnAt;
 
   const draw = async (count: number) => {
-    if (!selected || selected.totalStock < count || selected.items.length === 0) return flash("庫存不足！");
+    if (!selected || selected.totalStock < count) return flash("庫存不足！");
     setSpinning(true);
     setPhase("spin");
-    const req = doDraw({ data: { machineId: selected.id, count } }).catch(() => ({ ok: false as const, error: "連線失敗，請再試一次" }));
+    const req = doDraw({ data: { machineId: selected.id, count, deviceId: getDeviceId() } }).catch(() => ({ ok: false as const, error: "連線失敗，請再試一次" }));
     const t1 = setTimeout(() => setPhase("drop"), 1600);
     const t2 = setTimeout(() => setPhase("open"), 2500);
     const [r] = await Promise.all([req, new Promise((res) => setTimeout(res, 3200))]);
     if (!r.ok) { clearTimeout(t1); clearTimeout(t2); setSpinning(false); setPhase(null); reloadMachines(); return flash(r.error); }
-    const drawn: VaultItem[] = r.items.map((it) => ({ ...it, vaultId: Date.now() + Math.random().toString(36).slice(2), machineTitle: selected.title, price: selected.price, drawnAt: new Date().toLocaleDateString() }));
-    setVault((p) => [...p, ...drawn]);
+    setVault((p) => [...p, ...r.items]);
     reloadMachines();
     setSpinning(false);
     setPhase(null);
-    setResult(drawn);
+    setResult(r.items);
   };
 
   const checkout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (picked.length === 0) return flash("請先選擇要寄出的商品！");
+    if (!vault.length) return flash("倉庫沒有商品");
+    if (!/^09\d{8}$/.test(ship.phone)) return flash("請輸入 09 開頭的 10 碼手機號碼");
+    if (!/^\d{6}$/.test(ship.storeCode)) return flash("請點選 7-11 取貨門市");
+    if (!agreed) return flash("請先勾選同意出貨規則");
+    setSending(true);
     try {
-      await doOrder({ data: { deviceId: getDeviceId(), items: vault.filter((v) => picked.includes(v.vaultId)), shipping: { ...ship } } });
-    } catch { return flash("送出失敗，請再試一次"); }
-    setVault((p) => p.filter((v) => !picked.includes(v.vaultId)));
-    setPicked([]); setShip(emptyShip);
+      await doOrder({ data: { deviceId: getDeviceId(), shipping: { ...ship }, agreed } });
+    } catch { setSending(false); return flash("送出失敗，請確認資料後再試一次"); }
+    setSending(false);
+    setVault([]); setShip(emptyShip); setAgreed(false);
     await reloadOrders();
     flash("🎉 出貨申請已送出！");
     setTab("orders");
