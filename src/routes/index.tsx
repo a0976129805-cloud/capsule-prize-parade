@@ -573,3 +573,12 @@ function StorePicker({ onPick, onClose }: { onPick: (s: Store) => void; onClose:
     </div>
   );
 }
+
+function Rules() {
+  return (
+    <div className="flex gap-2 rounded-2xl border-2 border-destructive/40 bg-destructive/10 p-3 text-xs font-bold leading-relaxed">
+      <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
+      <p>{RULES}</p>
+    </div>
+  );
+}
