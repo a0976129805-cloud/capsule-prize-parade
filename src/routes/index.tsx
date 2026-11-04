@@ -340,13 +340,14 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
 }
 
 function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () => void; flash: (m: string) => void }) {
-  const [view, setView] = useState<"machines" | "orders">("machines");
+  const [view, setView] = useState<"machines" | "orders" | "seller">("machines");
   const [edit, setEdit] = useState<Machine | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const getOrders = useServerFn(adminOrders);
   const setStatus = useServerFn(adminSetOrderStatus);
   const saveM = useServerFn(adminSaveMachine);
   const delM = useServerFn(adminDeleteMachine);
+  const getSeller = useServerFn(adminGetSeller);
   const loadOrders = () => getOrders().then(setOrders).catch(() => flash("讀取訂單失敗"));
   useEffect(() => { loadOrders(); }, []);
   const field = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
@@ -358,16 +359,18 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
     setEdit(null); reload(); flash("已儲存");
   };
 
-  const exportCsv = () => {
+  const exportCsv = async () => {
     const list = orders.filter((o) => o.status === "待出貨");
-    const rows = list.length ? list : orders;
-    if (!rows.length) return flash("尚無訂單可匯出");
-    const blob = new Blob([ordersToCsv(rows)], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `7-11賣貨便_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    if (!list.length) return flash("沒有待出貨訂單");
+    let seller: Seller;
+    try { seller = await getSeller(); } catch { return flash("讀取賣家資料失敗"); }
+    if (missingSeller(seller).length) { setView("seller"); return flash("請先完整填寫賣家寄件與收款資料"); }
+    const XLSX = await import("xlsx");
+    const ws = XLSX.utils.aoa_to_sheet(build711Rows(list, seller));
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 17 } }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "工作表1");
+    XLSX.writeFile(wb, `一般交貨便-取貨付款_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   if (edit) return (
