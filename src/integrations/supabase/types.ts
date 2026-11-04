@@ -19,9 +19,12 @@ export type Database = {
           created_at: string
           device_id: string
           id: string
+          item_count: number
           items: Json
+          ship_email: string
           ship_name: string
           ship_phone: string
+          shipping_fee: number
           status: string
           store_code: string
           store_name: string
@@ -31,9 +34,12 @@ export type Database = {
           created_at?: string
           device_id: string
           id: string
+          item_count?: number
           items?: Json
+          ship_email?: string
           ship_name: string
           ship_phone: string
+          shipping_fee?: number
           status?: string
           store_code: string
           store_name: string
@@ -43,9 +49,12 @@ export type Database = {
           created_at?: string
           device_id?: string
           id?: string
+          item_count?: number
           items?: Json
+          ship_email?: string
           ship_name?: string
           ship_phone?: string
+          shipping_fee?: number
           status?: string
           store_code?: string
           store_name?: string
@@ -60,6 +69,7 @@ export type Database = {
           name: string
           product_id: string
           sort: number
+          stock: number
         }
         Insert: {
           id: string
@@ -67,6 +77,7 @@ export type Database = {
           name?: string
           product_id: string
           sort?: number
+          stock?: number
         }
         Update: {
           id?: string
@@ -74,6 +85,7 @@ export type Database = {
           name?: string
           product_id?: string
           sort?: number
+          stock?: number
         }
         Relationships: [
           {
@@ -118,11 +130,86 @@ export type Database = {
         }
         Relationships: []
       }
+      shop_settings: {
+        Row: {
+          data: Json
+          id: number
+        }
+        Insert: {
+          data?: Json
+          id?: number
+        }
+        Update: {
+          data?: Json
+          id?: number
+        }
+        Relationships: []
+      }
+      vault_items: {
+        Row: {
+          device_id: string
+          drawn_at: string
+          id: string
+          image: string
+          machine_title: string
+          name: string
+          order_id: string | null
+          price: number
+          prize_id: string
+          product_id: string
+        }
+        Insert: {
+          device_id: string
+          drawn_at?: string
+          id?: string
+          image?: string
+          machine_title?: string
+          name?: string
+          order_id?: string | null
+          price?: number
+          prize_id: string
+          product_id: string
+        }
+        Update: {
+          device_id?: string
+          drawn_at?: string
+          id?: string
+          image?: string
+          machine_title?: string
+          name?: string
+          order_id?: string | null
+          price?: number
+          prize_id?: string
+          product_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      draw_prizes: {
+        Args: { _device: string; _n: number; _product: string }
+        Returns: {
+          device_id: string
+          drawn_at: string
+          id: string
+          image: string
+          machine_title: string
+          name: string
+          order_id: string | null
+          price: number
+          prize_id: string
+          product_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "vault_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       take_stock: { Args: { _n: number; _product: string }; Returns: boolean }
     }
     Enums: {
