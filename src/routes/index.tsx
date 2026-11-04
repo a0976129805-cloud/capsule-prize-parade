@@ -3,15 +3,18 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAdmin, unlockAdmin, lockAdmin } from "@/lib/admin-gate.functions";
 import {
-  listMachines, drawPrizes, createOrder, myOrders, adminOrders, adminSetOrderStatus, adminSaveMachine, adminDeleteMachine,
+  listMachines, drawPrizes, createOrder, myOrders, myVault, adminOrders, adminSetOrderStatus, adminSaveMachine, adminDeleteMachine,
+  adminGetSeller, adminSaveSeller,
   type Machine, type VaultItem, type Shipping, type Order,
 } from "@/lib/gacha.functions";
-import { ordersToCsv } from "@/lib/csv";
+import { searchStores, getTowns, CITIES, type Store } from "@/lib/stores.functions";
+import { orderTotal, daysLeft, FREE_SHIP_COUNT, SHIP_FEE, VAULT_DAYS } from "@/lib/shipping";
+import { build711Rows, missingSeller, emptySeller, type Seller } from "@/lib/export711";
 import { supabase } from "@/integrations/supabase/client";
 import catLogo from "@/assets/cat-logo.png";
 import {
-  Sparkles, Package, ShoppingBag, Settings, RotateCw, CheckCircle2, ArrowLeft,
-  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw,
+  Sparkles, Package, ShoppingBag, Settings, RotateCw, ArrowLeft,
+  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -21,14 +24,16 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "奶油貓貓的日系線上扭蛋屋，手機就能轉蛋，抽中商品存入倉庫，7-11 賣貨便貨到付款。" },
       { property: "og:title", content: "奶油貓貓 ガチャ扭蛋屋" },
       { property: "og:description", content: "線上轉蛋、倉庫收藏、7-11 賣貨便貨到付款寄送。" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: App,
 });
 
 const ORDER_STATUSES = ["待出貨", "已出貨", "已取貨", "已取消"];
-const STORAGE = "gacha-vault-v2";
-const emptyShip: Shipping = { name: "", phone: "", storeName: "", storeCode: "" };
+const emptyShip: Shipping = { name: "", phone: "", email: "", storeName: "", storeCode: "" };
+const RULES = `倉庫商品可免費寄放 ${VAULT_DAYS} 天，申請出貨時須將倉內所有扭蛋一併結帳寄出，無法單獨挑選放棄。逾期未出貨將自動清除並取消資格。`;
 
 function getDeviceId() {
   let id = localStorage.getItem("gacha-device");
@@ -41,62 +46,67 @@ function App() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [vault, setVault] = useState<VaultItem[]>([]);
-  const [picked, setPicked] = useState<string[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<VaultItem[] | null>(null);
   const [phase, setPhase] = useState<null | "spin" | "drop" | "open">(null);
   const [ship, setShip] = useState<Shipping>(emptyShip);
+  const [agreed, setAgreed] = useState(false);
+  const [picker, setPicker] = useState(false);
+  const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
   const fetchMachines = useServerFn(listMachines);
   const doDraw = useServerFn(drawPrizes);
   const doOrder = useServerFn(createOrder);
   const fetchMine = useServerFn(myOrders);
+  const fetchVault = useServerFn(myVault);
 
   const reloadMachines = () => fetchMachines().then(setMachines).catch(() => {});
   const reloadOrders = () => fetchMine({ data: { deviceId: getDeviceId() } }).then(setOrders).catch(() => {});
+  const reloadVault = () => fetchVault({ data: { deviceId: getDeviceId() } }).then(setVault).catch(() => {});
 
   useEffect(() => {
-    try { const s = JSON.parse(localStorage.getItem(STORAGE) || "null"); if (Array.isArray(s)) setVault(s); } catch {}
-    setLoaded(true);
-    reloadMachines(); reloadOrders();
+    reloadMachines(); reloadOrders(); reloadVault();
     const ch = supabase.channel(`gacha-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => reloadMachines())
       .on("postgres_changes", { event: "*", schema: "public", table: "prizes" }, () => reloadMachines())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
-  useEffect(() => { if (loaded) localStorage.setItem(STORAGE, JSON.stringify(vault)); }, [vault, loaded]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2500); };
   const selected = machines.find((m) => m.id === selectedId) || null;
+  const sum = orderTotal(vault.map((v) => v.price));
+  const oldest = vault[0]?.drawnAt;
 
   const draw = async (count: number) => {
-    if (!selected || selected.totalStock < count || selected.items.length === 0) return flash("庫存不足！");
+    if (!selected || selected.totalStock < count) return flash("庫存不足！");
     setSpinning(true);
     setPhase("spin");
-    const req = doDraw({ data: { machineId: selected.id, count } }).catch(() => ({ ok: false as const, error: "連線失敗，請再試一次" }));
+    const req = doDraw({ data: { machineId: selected.id, count, deviceId: getDeviceId() } }).catch(() => ({ ok: false as const, error: "連線失敗，請再試一次" }));
     const t1 = setTimeout(() => setPhase("drop"), 1600);
     const t2 = setTimeout(() => setPhase("open"), 2500);
     const [r] = await Promise.all([req, new Promise((res) => setTimeout(res, 3200))]);
     if (!r.ok) { clearTimeout(t1); clearTimeout(t2); setSpinning(false); setPhase(null); reloadMachines(); return flash(r.error); }
-    const drawn: VaultItem[] = r.items.map((it) => ({ ...it, vaultId: Date.now() + Math.random().toString(36).slice(2), machineTitle: selected.title, price: selected.price, drawnAt: new Date().toLocaleDateString() }));
-    setVault((p) => [...p, ...drawn]);
+    setVault((p) => [...p, ...r.items]);
     reloadMachines();
     setSpinning(false);
     setPhase(null);
-    setResult(drawn);
+    setResult(r.items);
   };
 
   const checkout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (picked.length === 0) return flash("請先選擇要寄出的商品！");
+    if (!vault.length) return flash("倉庫沒有商品");
+    if (!/^09\d{8}$/.test(ship.phone)) return flash("請輸入 09 開頭的 10 碼手機號碼");
+    if (!/^\d{6}$/.test(ship.storeCode)) return flash("請點選 7-11 取貨門市");
+    if (!agreed) return flash("請先勾選同意出貨規則");
+    setSending(true);
     try {
-      await doOrder({ data: { deviceId: getDeviceId(), items: vault.filter((v) => picked.includes(v.vaultId)), shipping: { ...ship } } });
-    } catch { return flash("送出失敗，請再試一次"); }
-    setVault((p) => p.filter((v) => !picked.includes(v.vaultId)));
-    setPicked([]); setShip(emptyShip);
+      await doOrder({ data: { deviceId: getDeviceId(), shipping: { ...ship }, agreed } });
+    } catch { setSending(false); return flash("送出失敗，請確認資料後再試一次"); }
+    setSending(false);
+    setVault([]); setShip(emptyShip); setAgreed(false);
     await reloadOrders();
     flash("🎉 出貨申請已送出！");
     setTab("orders");
@@ -153,21 +163,27 @@ function App() {
               <div className={`flex h-24 w-24 items-center justify-center rounded-full border-4 border-card bg-[linear-gradient(180deg,var(--primary)_50%,var(--card)_50%)] shadow-lg ${spinning ? "animate-capsule" : ""}`}>
                 <RotateCw className="h-8 w-8 text-secondary-foreground" />
               </div>
+              {selected.totalStock <= 0 ? (
+                <p className="w-full rounded-full bg-muted py-3 text-center font-extrabold text-muted-foreground">完売御礼・已完售</p>
+              ) : (
               <div className="grid w-full grid-cols-2 gap-3">
                 {[1, 5].map((n) => (
-                  <button key={n} disabled={spinning} onClick={() => draw(n)} className="rounded-full bg-primary py-3 font-extrabold text-primary-foreground shadow-md transition active:scale-95 disabled:opacity-50">
-                    {n === 1 ? "單抽" : "五連抽"}<span className="block text-xs font-normal">NT${selected.price * n}</span>
+                  <button key={n} disabled={spinning || selected.totalStock < n} onClick={() => draw(n)} className="rounded-full bg-primary py-3 font-extrabold text-primary-foreground shadow-md transition active:scale-95 disabled:opacity-50">
+                    {n === 1 ? "單抽" : "五連抽"}<span className="block text-xs font-normal">{selected.totalStock < n ? "剩餘不足" : `NT$${selected.price * n}`}</span>
                   </button>
                 ))}
               </div>
+              )}
             </div>
             <div>
-              <p className="mb-2 font-bold">商品一覽</p>
+              <p className="mb-2 font-bold">全款式一覽</p>
               <div className="grid grid-cols-3 gap-2">
                 {selected.items.map((it) => (
-                  <div key={it.id} className="overflow-hidden rounded-xl border border-border bg-card">
+                  <div key={it.id} className={`relative overflow-hidden rounded-xl border border-border bg-card ${it.stock <= 0 ? "opacity-50 grayscale" : ""}`}>
                     <img src={it.image} alt={it.name} className="aspect-square w-full object-cover" />
-                    <p className="p-1.5 text-xs">{it.name}</p>
+                    {it.stock <= 0 && <span className="absolute inset-x-0 top-1/3 bg-foreground/70 py-1 text-center text-xs font-extrabold text-background">已完售</span>}
+                    <p className="px-1.5 pt-1.5 text-xs">{it.name}</p>
+                    <p className={`px-1.5 pb-1.5 text-[10px] font-bold ${it.stock > 0 && it.stock <= 2 ? "text-destructive" : "text-muted-foreground"}`}>剩餘 {it.stock} 顆</p>
                   </div>
                 ))}
               </div>
@@ -178,33 +194,47 @@ function App() {
         {tab === "vault" && (
           <div className="space-y-4">
             <h2 className="text-lg font-extrabold">我的倉庫（{vault.length}）</h2>
+            <div className="rounded-2xl border-2 border-border bg-card p-3">
+              {vault.length >= FREE_SHIP_COUNT ? (
+                <p className="text-sm font-extrabold text-primary">🎉 已達 {FREE_SHIP_COUNT} 顆，7-11 運費免費！</p>
+              ) : (
+                <p className="text-sm font-bold">🔥 已收集 {vault.length} 顆，再轉 <span className="text-primary">{FREE_SHIP_COUNT - vault.length}</span> 顆即享 7-11 免運！</p>
+              )}
+              <div className="mt-2 h-3 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, (vault.length / FREE_SHIP_COUNT) * 100)}%` }} />
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">滿 {FREE_SHIP_COUNT} 顆免運，未滿運費 NT${SHIP_FEE}</p>
+              {oldest && <p className="mt-1 text-xs font-bold text-destructive">⏰ 免費寄放剩餘 {daysLeft(oldest)} 天（以最早抽到的商品計算）</p>}
+            </div>
+            <Rules />
             {vault.length === 0 ? <Empty text="倉庫空空的，快去轉蛋吧！" /> : (
               <>
-                <div className="flex justify-end">
-                  <button onClick={() => setPicked(picked.length === vault.length ? [] : vault.map((v) => v.vaultId))} className="text-sm font-bold text-primary">
-                    {picked.length === vault.length ? "取消全選" : "全選"}
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {vault.map((v) => {
-                    const on = picked.includes(v.vaultId);
-                    return (
-                      <button key={v.vaultId} onClick={() => setPicked((p) => (on ? p.filter((x) => x !== v.vaultId) : [...p, v.vaultId]))}
-                        className={`relative overflow-hidden rounded-xl border-2 bg-card text-left ${on ? "border-primary" : "border-border"}`}>
-                        <img src={v.image} alt={v.name} className="aspect-square w-full object-cover" />
-                        {on && <CheckCircle2 className="absolute right-2 top-2 h-6 w-6 rounded-full bg-card text-primary" />}
-                        <div className="p-2"><p className="text-sm font-bold">{v.name}</p><p className="text-xs text-muted-foreground">{v.drawnAt}</p></div>
-                      </button>
-                    );
-                  })}
+                <div className="grid grid-cols-3 gap-2">
+                  {vault.map((v) => (
+                    <div key={v.vaultId} className="overflow-hidden rounded-xl border-2 border-border bg-card">
+                      <img src={v.image} alt={v.name} className="aspect-square w-full object-cover" />
+                      <div className="p-1.5"><p className="text-xs font-bold leading-tight">{v.name}</p><p className="text-[10px] text-muted-foreground">NT${v.price}</p></div>
+                    </div>
+                  ))}
                 </div>
                 <form onSubmit={checkout} className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
-                  <p className="flex items-center gap-2 font-bold"><Truck className="h-5 w-5 text-primary" /> 7-11 賣貨便 貨到付款（已選 {picked.length} 件）</p>
-                  {([["name", "收件人姓名"], ["phone", "手機號碼"], ["storeName", "取貨門市名稱"], ["storeCode", "門市店號"]] as const).map(([k, l]) => (
-                    <input key={k} required placeholder={l} value={ship[k]} onChange={(e) => setShip({ ...ship, [k]: e.target.value })}
+                  <p className="flex items-center gap-2 font-bold"><Truck className="h-5 w-5 text-primary" /> 7-11 取貨付款・整單出貨（共 {vault.length} 顆）</p>
+                  {([["name", "收件人姓名（請填證件姓名）", "text"], ["phone", "手機號碼（09 開頭 10 碼）", "tel"], ["email", "Email", "email"]] as const).map(([k, l, t]) => (
+                    <input key={k} required type={t} placeholder={l} value={ship[k]} onChange={(e) => setShip({ ...ship, [k]: e.target.value })}
                       className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" />
                   ))}
-                  <button className="w-full rounded-full bg-primary py-3 font-extrabold text-primary-foreground">申請出貨</button>
+                  <button type="button" onClick={() => setPicker(true)} className="flex w-full items-center gap-2 rounded-xl border-2 border-dashed border-primary bg-background px-3 py-2.5 text-left text-sm">
+                    <MapPin className="h-5 w-5 shrink-0 text-primary" />
+                    {ship.storeCode ? <span><b>{ship.storeName}門市</b>（店號 {ship.storeCode}）<span className="block text-xs text-primary">點此更換門市</span></span> : <span className="font-bold text-primary">點此選擇 7-11 取貨門市</span>}
+                  </button>
+                  <div className="space-y-1 rounded-xl bg-muted p-3 text-sm">
+                    <div className="flex justify-between"><span>扭蛋金額（{vault.length} 顆）</span><span>NT${sum.subtotal}</span></div>
+                    <div className="flex justify-between"><span>7-11 運費</span><span>{sum.fee ? `NT$${sum.fee}` : "免運"}</span></div>
+                    <div className="flex justify-between border-t border-border pt-1 font-extrabold"><span>取貨付款總金額</span><span className="text-primary">NT${sum.total}</span></div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">📦 包裹到店後請於 7 日內取貨付款，未取件將影響日後購買資格。</p>
+                  <label className="flex items-start gap-2 text-xs"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" /> 我已閱讀並同意：{RULES}</label>
+                  <button disabled={sending} className="w-full rounded-full bg-primary py-3 font-extrabold text-primary-foreground disabled:opacity-50">{sending ? "送出中…" : `📦 一鍵整單出貨（共 ${vault.length} 顆・NT$${sum.total}）`}</button>
                 </form>
               </>
             )}

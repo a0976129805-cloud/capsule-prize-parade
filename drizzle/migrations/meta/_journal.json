@@ -8,6 +8,13 @@
       "when": 1793677157149,
       "tag": "0000_gacha_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793750534817,
+      "tag": "0001_per_prize_stock_vault_settings",
+      "breakpoints": true
     }
   ]
 }
