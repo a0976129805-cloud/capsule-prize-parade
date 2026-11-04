@@ -318,6 +318,8 @@ function App() {
         </div>
       )}
 
+      {picker && <StorePicker onClose={() => setPicker(false)} onPick={(st) => { setShip((p) => ({ ...p, storeName: st.name, storeCode: st.code })); setPicker(false); }} />}
+
       {toast && <div className="animate-toast fixed inset-x-4 bottom-24 z-40 mx-auto max-w-sm rounded-xl bg-foreground px-4 py-3 text-center text-sm text-background shadow-lg">{toast}</div>}
     </div>
   );
@@ -340,13 +342,14 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
 }
 
 function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () => void; flash: (m: string) => void }) {
-  const [view, setView] = useState<"machines" | "orders">("machines");
+  const [view, setView] = useState<"machines" | "orders" | "seller">("machines");
   const [edit, setEdit] = useState<Machine | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const getOrders = useServerFn(adminOrders);
   const setStatus = useServerFn(adminSetOrderStatus);
   const saveM = useServerFn(adminSaveMachine);
   const delM = useServerFn(adminDeleteMachine);
+  const getSeller = useServerFn(adminGetSeller);
   const loadOrders = () => getOrders().then(setOrders).catch(() => flash("讀取訂單失敗"));
   useEffect(() => { loadOrders(); }, []);
   const field = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
@@ -358,16 +361,18 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
     setEdit(null); reload(); flash("已儲存");
   };
 
-  const exportCsv = () => {
+  const exportCsv = async () => {
     const list = orders.filter((o) => o.status === "待出貨");
-    const rows = list.length ? list : orders;
-    if (!rows.length) return flash("尚無訂單可匯出");
-    const blob = new Blob([ordersToCsv(rows)], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `7-11賣貨便_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    if (!list.length) return flash("沒有待出貨訂單");
+    let seller: Seller;
+    try { seller = await getSeller(); } catch { return flash("讀取賣家資料失敗"); }
+    if (missingSeller(seller).length) { setView("seller"); return flash("請先完整填寫賣家寄件與收款資料"); }
+    const XLSX = await import("xlsx");
+    const ws = XLSX.utils.aoa_to_sheet(build711Rows(list, seller));
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 17 } }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "工作表1");
+    XLSX.writeFile(wb, `一般交貨便-取貨付款_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   if (edit) return (
@@ -377,38 +382,41 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
       <input className={field} placeholder="名稱" value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} />
       <div className="grid grid-cols-2 gap-2">
         <label className="text-xs">單價<input type="number" className={field} value={edit.price} onChange={(e) => setEdit({ ...edit, price: +e.target.value })} /></label>
-        <label className="text-xs">庫存<input type="number" className={field} value={edit.totalStock} onChange={(e) => setEdit({ ...edit, totalStock: +e.target.value })} /></label>
+        <div className="text-xs">總庫存（自動加總）<p className="rounded-xl bg-muted px-3 py-2 text-sm font-bold">{edit.items.reduce((a, i) => a + (Number(i.stock) || 0), 0)} 顆</p></div>
       </div>
       <input className={field} placeholder="狀態標籤" value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })} />
       <input className={field} placeholder="封面圖片網址" value={edit.coverImage} onChange={(e) => setEdit({ ...edit, coverImage: e.target.value })} />
-      <p className="pt-2 font-bold">商品（{edit.items.length}）</p>
-      {edit.items.map((it, idx) => (
+      <p className="pt-2 font-bold">商品款式（{edit.items.length}）・每款各自設定顆數</p>
+      {edit.items.map((it, idx) => {
+        const up = (p: Partial<typeof it>) => setEdit({ ...edit, items: edit.items.map((x, j) => (j === idx ? { ...x, ...p } : x)) });
+        return (
         <div key={it.id} className="flex gap-2 rounded-xl border border-border bg-card p-2">
           <img src={it.image} alt="" className="h-14 w-14 rounded-lg bg-muted object-cover" />
           <div className="flex-1 space-y-1">
-            <input className={field} placeholder="商品名稱" value={it.name} onChange={(e) => setEdit({ ...edit, items: edit.items.map((x, j) => (j === idx ? { ...x, name: e.target.value } : x)) })} />
-            <input className={field} placeholder="圖片網址" value={it.image} onChange={(e) => setEdit({ ...edit, items: edit.items.map((x, j) => (j === idx ? { ...x, image: e.target.value } : x)) })} />
+            <input className={field} placeholder="商品名稱" value={it.name} onChange={(e) => up({ name: e.target.value })} />
+            <input className={field} placeholder="圖片網址" value={it.image} onChange={(e) => up({ image: e.target.value })} />
+            <label className="flex items-center gap-2 text-xs">此款庫存<input type="number" min={0} className={field} value={it.stock} onChange={(e) => up({ stock: Math.max(0, +e.target.value) })} />顆</label>
           </div>
           <button onClick={() => setEdit({ ...edit, items: edit.items.filter((_, j) => j !== idx) })} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
         </div>
-      ))}
-      <button onClick={() => setEdit({ ...edit, items: [...edit.items, { id: "i" + Date.now() + Math.random().toString(36).slice(2, 6), name: "", image: "" }] })} className="flex w-full items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border py-2 text-sm"><Plus className="h-4 w-4" /> 新增商品</button>
+      ); })}
+      <button onClick={() => setEdit({ ...edit, items: [...edit.items, { id: "i" + Date.now() + Math.random().toString(36).slice(2, 6), name: "", image: "", stock: 5 }] })} className="flex w-full items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border py-2 text-sm"><Plus className="h-4 w-4" /> 新增商品</button>
       <button onClick={save} className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-3 font-extrabold text-primary-foreground"><Check className="h-4 w-4" /> 儲存</button>
     </div>
   );
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 rounded-full bg-muted p-1 text-sm font-bold">
-        {(["machines", "orders"] as const).map((v) => (
+      <div className="grid grid-cols-3 rounded-full bg-muted p-1 text-xs font-bold">
+        {(["machines", "orders", "seller"] as const).map((v) => (
           <button key={v} onClick={() => setView(v)} className={`rounded-full py-2 ${view === v ? "bg-card text-primary shadow" : "text-muted-foreground"}`}>
-            {v === "machines" ? "扭蛋機管理" : `訂單管理（${orders.length}）`}
+            {v === "machines" ? "扭蛋機" : v === "orders" ? `訂單（${orders.length}）` : "賣家設定"}
           </button>
         ))}
       </div>
-      {view === "machines" ? (
+      {view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
         <>
-          <button onClick={() => setEdit({ id: "m" + Date.now(), title: "", price: 100, totalStock: 20, coverImage: "", status: "熱烈販售中", items: [] })}
+          <button onClick={() => setEdit({ id: "m" + Date.now(), title: "", price: 100, totalStock: 0, coverImage: "", status: "熱烈販售中", items: [] })}
             className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Plus className="h-4 w-4" /> 新增扭蛋機</button>
           {machines.map((m) => (
             <div key={m.id} className="flex items-center gap-3 rounded-2xl border-2 border-border bg-card p-2">
@@ -422,10 +430,10 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
       ) : (
         <>
           <div className="grid grid-cols-[1fr_auto] gap-2">
-            <button onClick={exportCsv} className="flex items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Download className="h-4 w-4" /> 匯出 7-11 賣貨便 CSV</button>
+            <button onClick={exportCsv} className="flex items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Download className="h-4 w-4" /> 匯出 7-11 賣貨便 Excel</button>
             <button onClick={loadOrders} aria-label="重新整理" className="rounded-full bg-muted px-3 text-muted-foreground"><RefreshCw className="h-4 w-4" /></button>
           </div>
-          <p className="text-center text-xs text-muted-foreground">匯出「待出貨」訂單（無待出貨時匯出全部）</p>
+          <p className="text-center text-xs text-muted-foreground">依官方「一般交貨便-取貨付款」範本匯出所有「待出貨」訂單</p>
           {orders.length === 0 ? <Empty text="尚無訂單" /> : orders.map((o) => (
             <OrderCard key={o.id} o={o}>
               <div className="mt-3 flex flex-wrap gap-1">
@@ -472,5 +480,105 @@ function AdminGate({ children }: { children: React.ReactNode }) {
       {err && <p className="text-xs text-destructive">密碼錯誤</p>}
       <button disabled={busy || !pw} className="w-full rounded-full bg-primary py-2.5 font-bold text-primary-foreground disabled:opacity-50">進入後台</button>
     </form>
+  );
+}
+
+const SELLER_FIELDS: [keyof Seller, string][] = [
+  ["senderName", "寄件人姓名"], ["senderPhone", "寄件人電話"], ["senderEmail", "寄件人 Email"],
+  ["accountName", "收款帳戶名稱"], ["bankCode", "金融機構代碼（例：822）"], ["branchCode", "分行代碼（7 碼）"],
+  ["accountNo", "銀行帳號"], ["idNo", "開戶身分證字號／統編"],
+];
+
+function SellerForm({ flash }: { flash: (m: string) => void }) {
+  const get = useServerFn(adminGetSeller);
+  const save = useServerFn(adminSaveSeller);
+  const [s, setS] = useState<Seller>(emptySeller);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { get().then(setS).catch(() => flash("讀取失敗")); }, []);
+  const field = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
+  return (
+    <form className="space-y-2 rounded-2xl border-2 border-border bg-card p-4" onSubmit={async (e) => {
+      e.preventDefault(); setBusy(true);
+      try { await save({ data: s }); flash("已儲存賣家資料"); } catch { flash("儲存失敗"); }
+      setBusy(false);
+    }}>
+      <p className="font-bold">賣家寄件與收款資料</p>
+      <p className="text-xs text-muted-foreground">匯出 7-11 檔案時會自動填入每一筆訂單，僅後台可見。</p>
+      {SELLER_FIELDS.map(([k, l]) => (
+        <label key={k} className="block text-xs">{l}<input className={field} value={s[k]} onChange={(e) => setS({ ...s, [k]: e.target.value })} /></label>
+      ))}
+      <label className="block text-xs">開戶身分類型
+        <select className={field} value={s.accountType} onChange={(e) => setS({ ...s, accountType: e.target.value as Seller["accountType"] })}>
+          <option>個人戶</option><option>商業戶</option>
+        </select>
+      </label>
+      <button disabled={busy} className="w-full rounded-full bg-primary py-2.5 font-bold text-primary-foreground disabled:opacity-50">{busy ? "儲存中…" : "儲存"}</button>
+    </form>
+  );
+}
+
+function StorePicker({ onPick, onClose }: { onPick: (s: Store) => void; onClose: () => void }) {
+  const towns = useServerFn(getTowns);
+  const search = useServerFn(searchStores);
+  const [city, setCity] = useState("");
+  const [townList, setTownList] = useState<string[]>([]);
+  const [town, setTown] = useState("");
+  const [q, setQ] = useState("");
+  const [list, setList] = useState<Store[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const cityName = CITIES.find(([id]) => id === city)?.[1] ?? "";
+  const run = async (t = town) => {
+    if (!q.trim() && !(cityName && t)) return;
+    setBusy(true);
+    try { setList(await search({ data: { q, city: cityName, town: t } })); } catch { setList([]); }
+    setBusy(false);
+  };
+  const field = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
+  return (
+    <div className="bg-overlay fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-t-3xl bg-card p-4 sm:rounded-3xl">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="flex items-center gap-1 font-extrabold"><MapPin className="h-5 w-5 text-primary" /> 選擇 7-11 取貨門市</p>
+          <button onClick={onClose} aria-label="關閉"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <select aria-label="縣市" className={field} value={city} onChange={async (e) => {
+            setCity(e.target.value); setTown(""); setTownList([]);
+            if (e.target.value) setTownList(await towns({ data: { cityId: e.target.value } }).catch(() => []));
+          }}>
+            <option value="">選擇縣市</option>
+            {CITIES.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
+          </select>
+          <select aria-label="鄉鎮區" className={field} value={town} disabled={!townList.length} onChange={(e) => { setTown(e.target.value); run(e.target.value); }}>
+            <option value="">選擇區域</option>
+            {townList.map((t) => <option key={t}>{t}</option>)}
+          </select>
+        </div>
+        <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); run(); }}>
+          <input className={field} placeholder="門市名稱、路名或 6 碼店號" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button aria-label="搜尋" className="rounded-xl bg-primary px-3 text-primary-foreground"><Search className="h-4 w-4" /></button>
+        </form>
+        <div className="mt-3 flex-1 space-y-2 overflow-y-auto">
+          {busy && <p className="py-6 text-center text-sm text-muted-foreground">搜尋中…</p>}
+          {!busy && list?.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">找不到門市，請換個關鍵字</p>}
+          {!busy && !list && <p className="py-6 text-center text-xs text-muted-foreground">選擇縣市與區域，或直接輸入門市名稱／店號</p>}
+          {!busy && list?.map((s) => (
+            <button key={s.code} onClick={() => onPick(s)} className="w-full rounded-xl border border-border p-3 text-left active:bg-muted">
+              <p className="text-sm font-bold">{s.name}門市 <span className="text-xs font-normal text-muted-foreground">店號 {s.code}</span></p>
+              <p className="text-xs text-muted-foreground">{s.address}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Rules() {
+  return (
+    <div className="flex gap-2 rounded-2xl border-2 border-destructive/40 bg-destructive/10 p-3 text-xs font-bold leading-relaxed">
+      <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
+      <p>{RULES}</p>
+    </div>
   );
 }
