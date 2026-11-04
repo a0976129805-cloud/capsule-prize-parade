@@ -318,6 +318,8 @@ function App() {
         </div>
       )}
 
+      {picker && <StorePicker onClose={() => setPicker(false)} onPick={(st) => { setShip((p) => ({ ...p, storeName: st.name, storeCode: st.code })); setPicker(false); }} />}
+
       {toast && <div className="animate-toast fixed inset-x-4 bottom-24 z-40 mx-auto max-w-sm rounded-xl bg-foreground px-4 py-3 text-center text-sm text-background shadow-lg">{toast}</div>}
     </div>
   );
@@ -478,5 +480,96 @@ function AdminGate({ children }: { children: React.ReactNode }) {
       {err && <p className="text-xs text-destructive">密碼錯誤</p>}
       <button disabled={busy || !pw} className="w-full rounded-full bg-primary py-2.5 font-bold text-primary-foreground disabled:opacity-50">進入後台</button>
     </form>
+  );
+}
+
+const SELLER_FIELDS: [keyof Seller, string][] = [
+  ["senderName", "寄件人姓名"], ["senderPhone", "寄件人電話"], ["senderEmail", "寄件人 Email"],
+  ["accountName", "收款帳戶名稱"], ["bankCode", "金融機構代碼（例：822）"], ["branchCode", "分行代碼（7 碼）"],
+  ["accountNo", "銀行帳號"], ["idNo", "開戶身分證字號／統編"],
+];
+
+function SellerForm({ flash }: { flash: (m: string) => void }) {
+  const get = useServerFn(adminGetSeller);
+  const save = useServerFn(adminSaveSeller);
+  const [s, setS] = useState<Seller>(emptySeller);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { get().then(setS).catch(() => flash("讀取失敗")); }, []);
+  const field = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
+  return (
+    <form className="space-y-2 rounded-2xl border-2 border-border bg-card p-4" onSubmit={async (e) => {
+      e.preventDefault(); setBusy(true);
+      try { await save({ data: s }); flash("已儲存賣家資料"); } catch { flash("儲存失敗"); }
+      setBusy(false);
+    }}>
+      <p className="font-bold">賣家寄件與收款資料</p>
+      <p className="text-xs text-muted-foreground">匯出 7-11 檔案時會自動填入每一筆訂單，僅後台可見。</p>
+      {SELLER_FIELDS.map(([k, l]) => (
+        <label key={k} className="block text-xs">{l}<input className={field} value={s[k]} onChange={(e) => setS({ ...s, [k]: e.target.value })} /></label>
+      ))}
+      <label className="block text-xs">開戶身分類型
+        <select className={field} value={s.accountType} onChange={(e) => setS({ ...s, accountType: e.target.value as Seller["accountType"] })}>
+          <option>個人戶</option><option>商業戶</option>
+        </select>
+      </label>
+      <button disabled={busy} className="w-full rounded-full bg-primary py-2.5 font-bold text-primary-foreground disabled:opacity-50">{busy ? "儲存中…" : "儲存"}</button>
+    </form>
+  );
+}
+
+function StorePicker({ onPick, onClose }: { onPick: (s: Store) => void; onClose: () => void }) {
+  const towns = useServerFn(getTowns);
+  const search = useServerFn(searchStores);
+  const [city, setCity] = useState("");
+  const [townList, setTownList] = useState<string[]>([]);
+  const [town, setTown] = useState("");
+  const [q, setQ] = useState("");
+  const [list, setList] = useState<Store[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const cityName = CITIES.find(([id]) => id === city)?.[1] ?? "";
+  const run = async (t = town) => {
+    if (!q.trim() && !(cityName && t)) return;
+    setBusy(true);
+    try { setList(await search({ data: { q, city: cityName, town: t } })); } catch { setList([]); }
+    setBusy(false);
+  };
+  const field = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
+  return (
+    <div className="bg-overlay fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-t-3xl bg-card p-4 sm:rounded-3xl">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="flex items-center gap-1 font-extrabold"><MapPin className="h-5 w-5 text-primary" /> 選擇 7-11 取貨門市</p>
+          <button onClick={onClose} aria-label="關閉"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <select aria-label="縣市" className={field} value={city} onChange={async (e) => {
+            setCity(e.target.value); setTown(""); setTownList([]);
+            if (e.target.value) setTownList(await towns({ data: { cityId: e.target.value } }).catch(() => []));
+          }}>
+            <option value="">選擇縣市</option>
+            {CITIES.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
+          </select>
+          <select aria-label="鄉鎮區" className={field} value={town} disabled={!townList.length} onChange={(e) => { setTown(e.target.value); run(e.target.value); }}>
+            <option value="">選擇區域</option>
+            {townList.map((t) => <option key={t}>{t}</option>)}
+          </select>
+        </div>
+        <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); run(); }}>
+          <input className={field} placeholder="門市名稱、路名或 6 碼店號" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button aria-label="搜尋" className="rounded-xl bg-primary px-3 text-primary-foreground"><Search className="h-4 w-4" /></button>
+        </form>
+        <div className="mt-3 flex-1 space-y-2 overflow-y-auto">
+          {busy && <p className="py-6 text-center text-sm text-muted-foreground">搜尋中…</p>}
+          {!busy && list?.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">找不到門市，請換個關鍵字</p>}
+          {!busy && !list && <p className="py-6 text-center text-xs text-muted-foreground">選擇縣市與區域，或直接輸入門市名稱／店號</p>}
+          {!busy && list?.map((s) => (
+            <button key={s.code} onClick={() => onPick(s)} className="w-full rounded-xl border border-border p-3 text-left active:bg-muted">
+              <p className="text-sm font-bold">{s.name}門市 <span className="text-xs font-normal text-muted-foreground">店號 {s.code}</span></p>
+              <p className="text-xs text-muted-foreground">{s.address}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
