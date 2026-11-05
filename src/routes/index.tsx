@@ -11,18 +11,20 @@ import { searchStores, getTowns, CITIES, type Store } from "@/lib/stores.functio
 import { orderTotal, daysLeft, FREE_SHIP_COUNT, SHIP_FEE, VAULT_DAYS } from "@/lib/shipping";
 import { build711Rows, missingSeller, emptySeller, type Seller } from "@/lib/export711";
 import { supabase } from "@/integrations/supabase/client";
+import { getShopInfo, adminSaveShopInfo, adminUploadImage } from "@/lib/shop.functions";
+import { emptyShopInfo, groupItems, type ShopInfo } from "@/lib/shop-info";
 import catLogo from "@/assets/cat-logo.png";
 import {
   Sparkles, Package, ShoppingBag, Settings, RotateCw, ArrowLeft,
-  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle,
+  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle, Menu, Upload, MessageCircle, Instagram, BookOpen, ShieldCheck, Lock,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "奶油貓貓 ガチャ扭蛋屋｜線上扭蛋・7-11 賣貨便寄送" },
-      { name: "description", content: "奶油貓貓的日系線上扭蛋屋，手機就能轉蛋，抽中商品存入倉庫，7-11 賣貨便貨到付款。" },
-      { property: "og:title", content: "奶油貓貓 ガチャ扭蛋屋" },
+      { title: "クリームキャット ガチャ屋｜日系線上扭蛋・7-11 貨到付款" },
+      { name: "description", content: "クリームキャット ガチャ屋：日系線上扭蛋屋，手機就能轉蛋，抽中商品存入倉庫，7-11 賣貨便貨到付款。" },
+      { property: "og:title", content: "クリームキャット ガチャ屋" },
       { property: "og:description", content: "線上轉蛋、倉庫收藏、7-11 賣貨便貨到付款寄送。" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -55,6 +57,9 @@ function App() {
   const [picker, setPicker] = useState(false);
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [menu, setMenu] = useState(false);
+  const [info, setInfo] = useState<ShopInfo>(emptyShopInfo);
+  const fetchInfo = useServerFn(getShopInfo);
   const fetchMachines = useServerFn(listMachines);
   const doDraw = useServerFn(drawPrizes);
   const doOrder = useServerFn(createOrder);
@@ -66,7 +71,7 @@ function App() {
   const reloadVault = () => fetchVault({ data: { deviceId: getDeviceId() } }).then(setVault).catch(() => {});
 
   useEffect(() => {
-    reloadMachines(); reloadOrders(); reloadVault();
+    reloadMachines(); reloadOrders(); reloadVault(); fetchInfo().then(setInfo).catch(() => {});
     const ch = supabase.channel(`gacha-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => reloadMachines())
       .on("postgres_changes", { event: "*", schema: "public", table: "prizes" }, () => reloadMachines())
@@ -115,12 +120,14 @@ function App() {
   return (
     <div className="min-h-screen pb-24 text-foreground">
       <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-md">
-        <div className="mx-auto flex max-w-md items-center px-4 py-2">
-          <div className="flex items-center gap-2 font-extrabold">
-            <img src={catLogo} alt="奶油貓貓" width={40} height={40} className="h-10 w-10 rounded-full bg-card object-contain p-0.5" />
-            奶油貓貓 🐈‍⬛ ガチャ扭蛋屋
-          </div>
+        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-2">
+          <button onClick={() => { setTab("home"); setSelectedId(null); }} className="flex items-center gap-2 font-extrabold">
+            <img src={catLogo} alt="クリームキャット" width={40} height={40} className="h-10 w-10 rounded-full bg-card object-contain p-0.5" />
+            クリームキャット ガチャ屋
+          </button>
+          <button onClick={() => setMenu(true)} aria-label="選單" className="rounded-full p-2 hover:bg-primary-foreground/15"><Menu className="h-6 w-6" /></button>
         </div>
+        {info.marquee && <div className="overflow-hidden bg-accent py-1 text-xs font-bold text-accent-foreground"><div className="animate-marquee">📢 {info.marquee}</div></div>}
       </header>
 
       <main className="mx-auto max-w-md px-4 py-4">
@@ -252,8 +259,8 @@ function App() {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card">
-        <div className="mx-auto grid max-w-md grid-cols-4">
-          {([["home", "轉蛋", Sparkles], ["vault", "倉庫", Package], ["orders", "訂單", ShoppingBag], ["admin", "後台", Settings]] as const).map(([k, l, Icon]) => (
+        <div className="mx-auto grid max-w-md grid-cols-3">
+          {([["home", "扭蛋機台", Sparkles], ["vault", "我的倉庫", Package], ["orders", "訂單進度", ShoppingBag]] as const).map(([k, l, Icon]) => (
             <button key={k} onClick={() => { setTab(k); if (k === "home") setSelectedId(null); }}
               className={`relative flex flex-col items-center gap-0.5 py-2.5 text-xs font-bold ${tab === k ? "text-primary" : "text-muted-foreground"}`}>
               <Icon className="h-5 w-5" />{l}
@@ -262,6 +269,8 @@ function App() {
           ))}
         </div>
       </nav>
+
+      {menu && <SideMenu info={info} onClose={() => setMenu(false)} go={(t) => { setTab(t); setSelectedId(null); setMenu(false); }} />}
 
       {phase && (
         <div className="bg-overlay fixed inset-0 z-50 flex flex-col items-center justify-center p-4">
@@ -332,9 +341,11 @@ function Empty({ text }: { text: string }) {
 function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
   return (
     <div className="rounded-2xl border-2 border-border bg-card p-4 text-sm">
-      <div className="flex justify-between"><span className="font-extrabold">{o.id}</span><span className="rounded-full bg-secondary px-2 text-xs font-bold text-secondary-foreground">{o.status}</span></div>
+      <div className="flex justify-between"><span className="font-extrabold">{o.id}</span><span className={`st-${o.status} rounded-full px-2.5 py-0.5 text-xs font-bold`}>{o.status}</span></div>
       <p className="text-xs text-muted-foreground">{o.createdAt}・總金額 NT${o.total}</p>
-      <p className="mt-2">{o.items.map((i) => i.name).join("、")}</p>
+      <ul className="mt-2 divide-y divide-border rounded-xl bg-muted/60 px-3">
+        {groupItems(o.items).map((g) => <li key={g.name} className="flex justify-between gap-2 py-1.5"><span>{g.name}</span><span className="shrink-0 font-bold">- {g.qty} 顆</span></li>)}
+      </ul>
       <p className="mt-1 text-xs text-muted-foreground">7-11 {o.shipping.storeName}（{o.shipping.storeCode}）・{o.shipping.name} {o.shipping.phone}</p>
       {children}
     </div>
@@ -342,9 +353,10 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
 }
 
 function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () => void; flash: (m: string) => void }) {
-  const [view, setView] = useState<"machines" | "orders" | "seller">("machines");
+  const [view, setView] = useState<"machines" | "orders" | "seller" | "shop">("machines");
   const [edit, setEdit] = useState<Machine | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [ostat, setOstat] = useState("待出貨");
   const getOrders = useServerFn(adminOrders);
   const setStatus = useServerFn(adminSetOrderStatus);
   const saveM = useServerFn(adminSaveMachine);
@@ -385,7 +397,10 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
         <div className="text-xs">總庫存（自動加總）<p className="rounded-xl bg-muted px-3 py-2 text-sm font-bold">{edit.items.reduce((a, i) => a + (Number(i.stock) || 0), 0)} 顆</p></div>
       </div>
       <input className={field} placeholder="狀態標籤" value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })} />
-      <input className={field} placeholder="封面圖片網址" value={edit.coverImage} onChange={(e) => setEdit({ ...edit, coverImage: e.target.value })} />
+      <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-2">
+        {edit.coverImage ? <img src={edit.coverImage} alt="" className="h-16 w-16 rounded-lg object-cover" /> : <div className="h-16 w-16 rounded-lg bg-muted" />}
+        <ImageUpload label="上傳機台封面" flash={flash} onDone={(url) => setEdit((e) => e && { ...e, coverImage: url })} />
+      </div>
       <p className="pt-2 font-bold">商品款式（{edit.items.length}）・每款各自設定顆數</p>
       {edit.items.map((it, idx) => {
         const up = (p: Partial<typeof it>) => setEdit({ ...edit, items: edit.items.map((x, j) => (j === idx ? { ...x, ...p } : x)) });
@@ -394,7 +409,7 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
           <img src={it.image} alt="" className="h-14 w-14 rounded-lg bg-muted object-cover" />
           <div className="flex-1 space-y-1">
             <input className={field} placeholder="商品名稱" value={it.name} onChange={(e) => up({ name: e.target.value })} />
-            <input className={field} placeholder="圖片網址" value={it.image} onChange={(e) => up({ image: e.target.value })} />
+            <ImageUpload label="上傳款式照片" flash={flash} onDone={(url) => setEdit((e) => e && { ...e, items: e.items.map((x) => (x.id === it.id ? { ...x, image: url } : x)) })} />
             <label className="flex items-center gap-2 text-xs">此款庫存<input type="number" min={0} className={field} value={it.stock} onChange={(e) => up({ stock: Math.max(0, +e.target.value) })} />顆</label>
           </div>
           <button onClick={() => setEdit({ ...edit, items: edit.items.filter((_, j) => j !== idx) })} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
@@ -407,14 +422,14 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 rounded-full bg-muted p-1 text-xs font-bold">
-        {(["machines", "orders", "seller"] as const).map((v) => (
+      <div className="grid grid-cols-4 rounded-full bg-muted p-1 text-xs font-bold">
+        {(["machines", "orders", "seller", "shop"] as const).map((v) => (
           <button key={v} onClick={() => setView(v)} className={`rounded-full py-2 ${view === v ? "bg-card text-primary shadow" : "text-muted-foreground"}`}>
-            {v === "machines" ? "扭蛋機" : v === "orders" ? `訂單（${orders.length}）` : "賣家設定"}
+            {v === "machines" ? "扭蛋機" : v === "orders" ? `訂單` : v === "seller" ? "賣家設定" : "商店公告"}
           </button>
         ))}
       </div>
-      {view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
+      {view === "shop" ? <ShopInfoForm flash={flash} /> : view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
         <>
           <button onClick={() => setEdit({ id: "m" + Date.now(), title: "", price: 100, totalStock: 0, coverImage: "", status: "熱烈販售中", items: [] })}
             className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Plus className="h-4 w-4" /> 新增扭蛋機</button>
@@ -434,16 +449,22 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
             <button onClick={loadOrders} aria-label="重新整理" className="rounded-full bg-muted px-3 text-muted-foreground"><RefreshCw className="h-4 w-4" /></button>
           </div>
           <p className="text-center text-xs text-muted-foreground">依官方「一般交貨便-取貨付款」範本匯出所有「待出貨」訂單</p>
-          {orders.length === 0 ? <Empty text="尚無訂單" /> : orders.map((o) => (
+          <div className="grid grid-cols-5 gap-1 text-xs font-bold">
+            {[...ORDER_STATUSES, "全部"].map((s) => {
+              const n = s === "全部" ? orders.length : orders.filter((o) => o.status === s).length;
+              return <button key={s} onClick={() => setOstat(s)} className={`rounded-full py-1.5 ${ostat === s ? (s === "全部" ? "bg-foreground text-background" : `st-${s}`) : "bg-muted text-muted-foreground"} ${ostat === s ? "ring-2 ring-ring/40" : ""}`}>{s}({n})</button>;
+            })}
+          </div>
+          {(() => { const list = ostat === "全部" ? orders : orders.filter((o) => o.status === ostat); return list.length === 0 ? <Empty text={`沒有「${ostat}」訂單`} /> : list.map((o) => (
             <OrderCard key={o.id} o={o}>
               <div className="mt-3 flex flex-wrap gap-1">
                 {ORDER_STATUSES.map((s) => (
                   <button key={s} onClick={async () => { setOrders((p) => p.map((x) => (x.id === o.id ? { ...x, status: s } : x))); await setStatus({ data: { id: o.id, status: s } }).catch(() => flash("更新失敗")); }}
-                    className={`rounded-full px-3 py-1 text-xs font-bold ${o.status === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{s}</button>
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${o.status === s ? `st-${s}` : "bg-muted text-muted-foreground"}`}>{s}</button>
                 ))}
               </div>
             </OrderCard>
-          ))}
+          )); })()}
         </>
       )}
     </div>
@@ -579,6 +600,98 @@ function Rules() {
     <div className="flex gap-2 rounded-2xl border-2 border-destructive/40 bg-destructive/10 p-3 text-xs font-bold leading-relaxed">
       <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
       <p>{RULES}</p>
+    </div>
+  );
+}
+
+async function shrink(file: File): Promise<{ base64: string; type: string }> {
+  const img = await createImageBitmap(file);
+  const max = 1200, k = Math.min(1, max / Math.max(img.width, img.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+  const url = c.toDataURL("image/jpeg", 0.85);
+  return { base64: url.split(",")[1] ?? "", type: "image/jpeg" };
+}
+
+function ImageUpload({ label, onDone, flash }: { label: string; onDone: (url: string) => void; flash: (m: string) => void }) {
+  const up = useServerFn(adminUploadImage);
+  const [busy, setBusy] = useState(false);
+  return (
+    <label className={`inline-flex cursor-pointer items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground ${busy ? "opacity-50" : ""}`}>
+      <Upload className="h-3.5 w-3.5" />{busy ? "上傳中…" : label}
+      <input type="file" accept="image/*" className="hidden" disabled={busy} onChange={async (e) => {
+        const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+        setBusy(true);
+        try { const r = await up({ data: await shrink(f) }); onDone(r.url); flash("圖片已上傳，記得按儲存"); } catch { flash("上傳失敗，請重新登入後台再試"); }
+        setBusy(false);
+      }} />
+    </label>
+  );
+}
+
+function ShopInfoForm({ flash }: { flash: (m: string) => void }) {
+  const get = useServerFn(getShopInfo);
+  const save = useServerFn(adminSaveShopInfo);
+  const [s, setS] = useState<ShopInfo>(emptyShopInfo);
+  useEffect(() => { get().then(setS).catch(() => flash("讀取失敗")); }, []);
+  const field = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
+  const F: [keyof ShopInfo, string][] = [["lineUrl", "官方 LINE 連結（https://lin.ee/...）"], ["igUrl", "Instagram 連結（https://instagram.com/...）"], ["serviceHours", "客服時間（例：每日 10:00–22:00）"], ["contactEmail", "客服 Email"]];
+  return (
+    <form className="space-y-2 rounded-2xl border-2 border-border bg-card p-4" onSubmit={async (e) => {
+      e.preventDefault();
+      try { await save({ data: s }); flash("已更新，所有顧客立即看到"); } catch (err) { flash(err instanceof Error && err.message.includes("https") ? "連結需以 https:// 開頭" : "儲存失敗"); }
+    }}>
+      <p className="font-bold">商店與公告設定</p>
+      <label className="block text-xs">跑馬燈公告<textarea rows={3} className={field} value={s.marquee} onChange={(e) => setS({ ...s, marquee: e.target.value })} /></label>
+      {F.map(([k, l]) => <label key={k} className="block text-xs">{l}<input className={field} value={s[k]} onChange={(e) => setS({ ...s, [k]: e.target.value })} /></label>)}
+      <button className="w-full rounded-full bg-primary py-2.5 font-bold text-primary-foreground">儲存</button>
+    </form>
+  );
+}
+
+function SideMenu({ info, onClose, go }: { info: ShopInfo; onClose: () => void; go: (t: "home" | "vault" | "orders" | "admin") => void }) {
+  const [open, setOpen] = useState<string | null>("guide");
+  const Sec = ({ id, icon: Icon, title, children }: { id: string; icon: typeof BookOpen; title: string; children: React.ReactNode }) => (
+    <div className="rounded-2xl border border-border bg-card">
+      <button onClick={() => setOpen(open === id ? null : id)} className="flex w-full items-center gap-2 p-3 text-left text-sm font-extrabold"><Icon className="h-4 w-4 text-primary" />{title}</button>
+      {open === id && <div className="space-y-1.5 px-3 pb-3 text-xs leading-relaxed text-muted-foreground">{children}</div>}
+    </div>
+  );
+  return (
+    <div className="bg-overlay fixed inset-0 z-40" onClick={onClose}>
+      <aside onClick={(e) => e.stopPropagation()} className="animate-drawer absolute inset-y-0 right-0 flex w-[85%] max-w-sm flex-col gap-3 overflow-y-auto bg-background p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <img src={catLogo} alt="" width={48} height={48} className="h-12 w-12 rounded-full bg-card p-0.5" />
+            <div><p className="font-extrabold">クリームキャット ガチャ屋</p><p className="text-xs text-muted-foreground">在台灣也能享受日本扭蛋的驚喜</p></div>
+          </div>
+          <button onClick={onClose} aria-label="關閉"><X className="h-5 w-5" /></button>
+        </div>
+        <Sec id="guide" icon={BookOpen} title="新手玩法 3 步驟">
+          <p>① 挑選喜歡的扭蛋機，單抽或五連抽。</p>
+          <p>② 抽到的扭蛋自動放進「我的倉庫」，免費寄放 {VAULT_DAYS} 天。</p>
+          <p>③ 申請出貨、選擇 7-11 門市，貨到付款寄到你身邊。</p>
+        </Sec>
+        <Sec id="ship" icon={Truck} title="運費與寄送說明">
+          <p>單筆訂單滿 {FREE_SHIP_COUNT} 顆免運；未滿 {FREE_SHIP_COUNT} 顆運費 NT${SHIP_FEE}。</p>
+          <p>{RULES}</p>
+        </Sec>
+        <Sec id="safe" icon={ShieldCheck} title="安心購物保證">
+          <p>✅ 7-11 取貨付款：到門市取件時才付款，不需事先轉帳。</p>
+          <p>✅ 每款扭蛋庫存即時同步，抽中即保留，不會超賣。</p>
+          <p>⚠️ 本店不會主動要求您轉帳、提供信用卡或 ATM 操作，如遇可疑訊息請透過官方 LINE 確認。</p>
+          <p>因隨機商品性質，恕不接受個人因素之退換貨或取消。</p>
+        </Sec>
+        <div className="grid grid-cols-2 gap-2">
+          {info.lineUrl && <a href={info.lineUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 rounded-full bg-secondary py-2.5 text-sm font-bold text-secondary-foreground"><MessageCircle className="h-4 w-4" />LINE 客服</a>}
+          {info.igUrl && <a href={info.igUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 rounded-full bg-accent py-2.5 text-sm font-bold text-accent-foreground"><Instagram className="h-4 w-4" />Instagram</a>}
+        </div>
+        {(info.serviceHours || info.contactEmail) && <p className="text-center text-xs text-muted-foreground">{info.serviceHours}{info.serviceHours && info.contactEmail ? "・" : ""}{info.contactEmail}</p>}
+        <div className="mt-auto border-t border-border pt-3 text-center">
+          <button onClick={() => go("admin")} className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"><Lock className="h-3 w-3" />店家管理登入</button>
+        </div>
+      </aside>
     </div>
   );
 }
