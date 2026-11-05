@@ -127,7 +127,7 @@ function App() {
           </button>
           <button onClick={() => setMenu(true)} aria-label="選單" className="rounded-full p-2 hover:bg-primary-foreground/15"><Menu className="h-6 w-6" /></button>
         </div>
-        {info.marquee && <div className="overflow-hidden bg-accent py-1 text-xs font-bold text-accent-foreground"><span className="animate-marquee">📢 {info.marquee}</span></div>}
+        {info.marquee && <div className="overflow-hidden bg-accent py-1 text-xs font-bold text-accent-foreground"><div className="animate-marquee">📢 {info.marquee}</div></div>}
       </header>
 
       <main className="mx-auto max-w-md px-4 py-4">
