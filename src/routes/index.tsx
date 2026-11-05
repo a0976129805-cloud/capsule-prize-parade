@@ -611,7 +611,7 @@ async function shrink(file: File): Promise<{ base64: string; type: string }> {
   c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
   c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
   const url = c.toDataURL("image/jpeg", 0.85);
-  return { base64: url.split(",")[1], type: "image/jpeg" };
+  return { base64: url.split(",")[1] ?? "", type: "image/jpeg" };
 }
 
 function ImageUpload({ label, onDone, flash }: { label: string; onDone: (url: string) => void; flash: (m: string) => void }) {
