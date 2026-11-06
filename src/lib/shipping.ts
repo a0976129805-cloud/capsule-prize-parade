@@ -1,8 +1,8 @@
 // Business rules for vault storage and 7-11 cash-on-delivery shipping.
 export const FREE_SHIP_COUNT = 10;
 export const SHIP_FEE = 38;
-export const VAULT_DAYS = 5;
-const DAY = 86_400_000;
+export const VAULT_HOURS = 24;
+export const VAULT_MS = VAULT_HOURS * 3_600_000;
 
 export function shippingFee(count: number) {
   return count >= FREE_SHIP_COUNT ? 0 : SHIP_FEE;
@@ -15,14 +15,16 @@ export function orderTotal(prices: number[]) {
 }
 
 export function expiresAt(drawnAt: string | Date) {
-  return new Date(new Date(drawnAt).getTime() + VAULT_DAYS * DAY);
+  return new Date(new Date(drawnAt).getTime() + VAULT_MS);
 }
 
 export function isExpired(drawnAt: string | Date, now = new Date()) {
   return expiresAt(drawnAt).getTime() <= now.getTime();
 }
 
-/** Whole days left before the oldest item expires (0 = expires today). */
-export function daysLeft(drawnAt: string | Date, now = new Date()) {
-  return Math.max(0, Math.ceil((expiresAt(drawnAt).getTime() - now.getTime()) / DAY));
+/** "HH:MM" left before the oldest item is released back to the machine. */
+export function timeLeft(drawnAt: string | Date, now = new Date()) {
+  const ms = Math.max(0, expiresAt(drawnAt).getTime() - now.getTime());
+  const h = Math.floor(ms / 3_600_000), m = Math.floor((ms % 3_600_000) / 60_000);
+  return `${h} 小時 ${String(m).padStart(2, "0")} 分`;
 }

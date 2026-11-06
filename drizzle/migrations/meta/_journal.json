@@ -15,6 +15,13 @@
       "when": 1793750534817,
       "tag": "0001_per_prize_stock_vault_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793932366487,
+      "tag": "0002_set_purchase_and_release",
+      "breakpoints": true
     }
   ]
 }
