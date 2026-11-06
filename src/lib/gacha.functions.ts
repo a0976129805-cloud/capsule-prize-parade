@@ -38,7 +38,7 @@ const toVault = (r: VRow): VaultItem => ({ vaultId: r.id, id: r.prize_id, name: 
 /** Releases (returns to machine stock) unordered vault items older than the free storage period. */
 async function purgeExpired(db: Awaited<ReturnType<typeof admin>>, deviceId?: string) {
   const cutoff = new Date(Date.now() - VAULT_MS).toISOString();
-  await db.rpc("release_expired_vault", { _cutoff: cutoff, _device: deviceId ?? undefined });
+  await db.rpc("release_expired_vault", deviceId ? { _cutoff: cutoff, _device: deviceId } : { _cutoff: cutoff });
 }
 
 export const myVault = createServerFn({ method: "POST" })

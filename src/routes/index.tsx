@@ -8,7 +8,7 @@ import {
   type Machine, type VaultItem, type Shipping, type Order,
 } from "@/lib/gacha.functions";
 import { searchStores, getTowns, CITIES, type Store } from "@/lib/stores.functions";
-import { orderTotal, daysLeft, FREE_SHIP_COUNT, SHIP_FEE, VAULT_DAYS } from "@/lib/shipping";
+import { orderTotal, timeLeft, FREE_SHIP_COUNT, SHIP_FEE, VAULT_HOURS } from "@/lib/shipping";
 import { build711Rows, missingSeller, emptySeller, type Seller } from "@/lib/export711";
 import { supabase } from "@/integrations/supabase/client";
 import { getShopInfo, adminSaveShopInfo, adminUploadImage } from "@/lib/shop.functions";
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/")({
 
 const ORDER_STATUSES = ["待出貨", "已出貨", "已取貨", "已取消"];
 const emptyShip: Shipping = { name: "", phone: "", email: "", storeName: "", storeCode: "" };
-const RULES = `倉庫商品可免費寄放 ${VAULT_DAYS} 天，申請出貨時須將倉內所有扭蛋一併結帳寄出，無法單獨挑選放棄。逾期未出貨將自動清除並取消資格。`;
+const RULES = `倉庫商品免費暫存 ${VAULT_HOURS} 小時，申請出貨時須將倉內所有扭蛋一併結帳寄出，無法單獨挑選放棄。逾期未出貨的商品將自動釋回機台。`;
 
 function getDeviceId() {
   let id = localStorage.getItem("gacha-device");
@@ -211,7 +211,7 @@ function App() {
                 <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, (vault.length / FREE_SHIP_COUNT) * 100)}%` }} />
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">滿 {FREE_SHIP_COUNT} 顆免運，未滿運費 NT${SHIP_FEE}</p>
-              {oldest && <p className="mt-1 text-xs font-bold text-destructive">⏰ 免費寄放剩餘 {daysLeft(oldest)} 天（以最早抽到的商品計算）</p>}
+              {oldest && <p className="mt-1 text-xs font-bold text-destructive">⏰ 暫存剩餘 {timeLeft(oldest)}（以最早抽到的商品計算）</p>}
             </div>
             <Rules />
             {vault.length === 0 ? <Empty text="倉庫空空的，快去轉蛋吧！" /> : (
@@ -431,7 +431,7 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
       </div>
       {view === "shop" ? <ShopInfoForm flash={flash} /> : view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
         <>
-          <button onClick={() => setEdit({ id: "m" + Date.now(), title: "", price: 100, totalStock: 0, coverImage: "", status: "熱烈販售中", items: [] })}
+          <button onClick={() => setEdit({ id: "m" + Date.now(), title: "", price: 100, totalStock: 0, setPrice: 0, coverImage: "", status: "熱烈販售中", items: [] })}
             className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Plus className="h-4 w-4" /> 新增扭蛋機</button>
           {machines.map((m) => (
             <div key={m.id} className="flex items-center gap-3 rounded-2xl border-2 border-border bg-card p-2">
@@ -670,7 +670,7 @@ function SideMenu({ info, onClose, go }: { info: ShopInfo; onClose: () => void; 
         </div>
         <Sec id="guide" icon={BookOpen} title="新手玩法 3 步驟">
           <p>① 挑選喜歡的扭蛋機，單抽或五連抽。</p>
-          <p>② 抽到的扭蛋自動放進「我的倉庫」，免費寄放 {VAULT_DAYS} 天。</p>
+          <p>② 抽到的扭蛋自動放進「我的倉庫」，免費暫存 {VAULT_HOURS} 小時。</p>
           <p>③ 申請出貨、選擇 7-11 門市，貨到付款寄到你身邊。</p>
         </Sec>
         <Sec id="ship" icon={Truck} title="運費與寄送說明">
