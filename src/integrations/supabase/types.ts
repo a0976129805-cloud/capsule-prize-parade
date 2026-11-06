@@ -103,6 +103,7 @@ export type Database = {
           created_at: string
           id: string
           price: number
+          set_price: number
           sort: number
           status: string
           title: string
@@ -113,6 +114,7 @@ export type Database = {
           created_at?: string
           id: string
           price?: number
+          set_price?: number
           sort?: number
           status?: string
           title: string
@@ -123,6 +125,7 @@ export type Database = {
           created_at?: string
           id?: string
           price?: number
+          set_price?: number
           sort?: number
           status?: string
           title?: string
@@ -189,6 +192,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      buy_set: {
+        Args: { _device: string; _product: string }
+        Returns: {
+          device_id: string
+          drawn_at: string
+          id: string
+          image: string
+          machine_title: string
+          name: string
+          order_id: string | null
+          price: number
+          prize_id: string
+          product_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "vault_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       draw_prizes: {
         Args: { _device: string; _n: number; _product: string }
         Returns: {
@@ -209,6 +233,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      release_expired_vault: {
+        Args: { _cutoff: string; _device?: string }
+        Returns: undefined
       }
       take_stock: { Args: { _n: number; _product: string }; Returns: boolean }
     }
