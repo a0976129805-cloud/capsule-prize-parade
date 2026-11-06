@@ -23,10 +23,11 @@ export const adminSaveShopInfo = createServerFn({ method: "POST" })
   .validator((d: ShopInfo) => d)
   .handler(async ({ data }) => {
     await requireAdmin();
-    const clean = Object.fromEntries(Object.keys(emptyShopInfo).map((k) => [k, String((data as Record<string, unknown>)[k] ?? "").trim().slice(0, 500)]));
-    for (const k of ["lineUrl", "igUrl"]) if (clean[k] && !/^https:\/\//.test(clean[k])) throw new Error("連結需以 https:// 開頭");
+    const clean: Record<string, unknown> = Object.fromEntries(Object.keys(emptyShopInfo).filter((k) => k !== "banners").map((k) => [k, String((data as Record<string, unknown>)[k] ?? "").trim().slice(0, 500)]));
+    clean.banners = (Array.isArray(data.banners) ? data.banners : []).map(String).filter((u) => /^\/api\/public\/img\/[\w.-]+$/.test(u)).slice(0, 8);
+    for (const k of ["lineUrl", "igUrl"]) if (clean[k] && !/^https:\/\//.test(String(clean[k]))) throw new Error("連結需以 https:// 開頭");
     const db = await admin();
-    const { error } = await db.from("shop_settings").upsert({ id: PUBLIC_ROW, data: clean });
+    const { error } = await db.from("shop_settings").upsert({ id: PUBLIC_ROW, data: clean as never });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

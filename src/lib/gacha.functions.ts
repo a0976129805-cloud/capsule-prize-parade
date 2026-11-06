@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { useSession } from "@tanstack/react-start/server";
-import { orderTotal, isExpired, VAULT_DAYS } from "@/lib/shipping";
+import { orderTotal, isExpired, VAULT_MS } from "@/lib/shipping";
 import { emptySeller, type Seller } from "@/lib/export711";
 
 export type Item = { id: string; name: string; image: string; stock: number };
-export type Machine = { id: string; title: string; price: number; totalStock: number; coverImage: string; status: string; items: Item[] };
+export type Machine = { id: string; title: string; price: number; totalStock: number; setPrice: number; coverImage: string; status: string; items: Item[] };
 export type VaultItem = { vaultId: string; id: string; name: string; image: string; machineTitle: string; drawnAt: string; price: number };
 export type Shipping = { name: string; phone: string; email: string; storeName: string; storeCode: string };
 export type Order = { id: string; items: VaultItem[]; shipping: Shipping; total: number; fee: number; count: number; createdAt: string; status: string };
@@ -28,19 +28,17 @@ export const listMachines = createServerFn({ method: "GET" }).handler(async () =
   ]);
   return (p ?? []).map((m): Machine => {
     const items = (z ?? []).filter((x) => x.product_id === m.id).map((x) => ({ id: x.id, name: x.name, image: x.image, stock: x.stock }));
-    return { id: m.id, title: m.title, price: m.price, coverImage: m.cover_image, status: m.status, items, totalStock: items.reduce((a, i) => a + i.stock, 0) };
+    return { id: m.id, title: m.title, price: m.price, setPrice: m.set_price ?? 0, coverImage: m.cover_image, status: m.status, items, totalStock: items.reduce((a, i) => a + i.stock, 0) };
   });
 });
 
 type VRow = { id: string; prize_id: string; name: string; image: string; machine_title: string; price: number; drawn_at: string };
 const toVault = (r: VRow): VaultItem => ({ vaultId: r.id, id: r.prize_id, name: r.name, image: r.image, machineTitle: r.machine_title, price: r.price, drawnAt: r.drawn_at });
 
-/** Deletes unordered vault items older than the free storage period. */
+/** Releases (returns to machine stock) unordered vault items older than the free storage period. */
 async function purgeExpired(db: Awaited<ReturnType<typeof admin>>, deviceId?: string) {
-  const cutoff = new Date(Date.now() - VAULT_DAYS * 86_400_000).toISOString();
-  let q = db.from("vault_items").delete().is("order_id", null).lt("drawn_at", cutoff);
-  if (deviceId) q = q.eq("device_id", deviceId);
-  await q;
+  const cutoff = new Date(Date.now() - VAULT_MS).toISOString();
+  await db.rpc("release_expired_vault", { _cutoff: cutoff, _device: deviceId ?? undefined });
 }
 
 export const myVault = createServerFn({ method: "POST" })
@@ -60,6 +58,17 @@ export const drawPrizes = createServerFn({ method: "POST" })
     const { data: rows, error } = await db.rpc("draw_prizes", { _product: data.machineId, _n: data.count, _device: data.deviceId });
     if (error) return { ok: false as const, error: "抽獎失敗，請再試一次" };
     if (!rows?.length) return { ok: false as const, error: "庫存不足！" };
+    return { ok: true as const, items: (rows as VRow[]).map(toVault) };
+  });
+
+export const buySet = createServerFn({ method: "POST" })
+  .validator((d: { machineId: string; deviceId: string }) => ({ machineId: String(d.machineId), deviceId: dev(d.deviceId) }))
+  .handler(async ({ data }) => {
+    if (!data.deviceId) return { ok: false as const, error: "裝置識別失敗" };
+    const db = await admin();
+    const { data: rows, error } = await db.rpc("buy_set", { _product: data.machineId, _device: data.deviceId });
+    if (error) return { ok: false as const, error: "購買失敗，請再試一次" };
+    if (!rows?.length) return { ok: false as const, error: "整套已無法購買（有款式售完）" };
     return { ok: true as const, items: (rows as VRow[]).map(toVault) };
   });
 
@@ -126,7 +135,7 @@ export const adminSaveMachine = createServerFn({ method: "POST" })
     const db = await admin();
     const items = m.items.map((it) => ({ ...it, stock: Math.max(0, Math.floor(Number(it.stock) || 0)) }));
     const total = items.reduce((a, i) => a + i.stock, 0);
-    const { error } = await db.from("products").upsert({ id: m.id, title: m.title, price: m.price, total_stock: total, cover_image: m.coverImage, status: m.status });
+    const { error } = await db.from("products").upsert({ id: m.id, title: m.title, price: m.price, total_stock: total, set_price: Math.max(0, Math.floor(Number(m.setPrice) || 0)), cover_image: m.coverImage, status: m.status });
     if (error) throw new Error(error.message);
     await db.from("prizes").delete().eq("product_id", m.id);
     if (items.length) await db.from("prizes").insert(items.map((it, i) => ({ id: it.id, product_id: m.id, name: it.name, image: it.image, stock: it.stock, sort: i })));
