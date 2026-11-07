@@ -1,16 +1,16 @@
 // Business rules for vault storage and 7-11 cash-on-delivery shipping.
-export const FREE_SHIP_COUNT = 10;
+export const FREE_SHIP_AMOUNT = 1000;
 export const SHIP_FEE = 38;
 export const VAULT_HOURS = 24;
 export const VAULT_MS = VAULT_HOURS * 3_600_000;
 
-export function shippingFee(count: number) {
-  return count >= FREE_SHIP_COUNT ? 0 : SHIP_FEE;
+export function shippingFee(subtotal: number) {
+  return subtotal >= FREE_SHIP_AMOUNT ? 0 : SHIP_FEE;
 }
 
 export function orderTotal(prices: number[]) {
   const sub = prices.reduce((a, p) => a + (Number(p) || 0), 0);
-  const fee = shippingFee(prices.length);
+  const fee = shippingFee(sub);
   return { subtotal: sub, fee, total: sub + fee };
 }
 
