@@ -23,8 +23,9 @@ export function BannerCarousel({ images, onSets, onGuide }: { images: string[]; 
     return () => clearInterval(t);
   }, [count, paused]);
   const s = slides[current % slides.length];
+  if (!s) return null;
   return <section aria-label="奶油貓精選輪播" aria-roledescription="輪播" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocusCapture={() => setPaused(true)} onBlurCapture={() => setPaused(false)}>
-    <div className="boutique-banner relative overflow-hidden" onTouchStart={(e) => { e.currentTarget.dataset.touch = String(e.touches[0]?.clientX || 0); }} onTouchEnd={(e) => { const delta = (e.changedTouches[0]?.clientX || 0) - Number(e.currentTarget.dataset.touch); if (Math.abs(delta) > 40) move(delta < 0 ? 1 : -1); }}>
+    <div className="boutique-banner relative overflow-hidden" onTouchStart={(e) => { e.currentTarget.dataset['touch'] = String(e.touches[0]?.clientX || 0); }} onTouchEnd={(e) => { const delta = (e.changedTouches[0]?.clientX || 0) - Number(e.currentTarget.dataset['touch']); if (Math.abs(delta) > 40) move(delta < 0 ? 1 : -1); }}>
       <img src={images[current] || boutique} alt={images.length ? `店長精選 ${current + 1}` : '奶油貓與日本扭蛋機插畫'} width={1536} height={1024} className="absolute inset-0 h-full w-full object-cover" />
       {!images.length && <div className="relative z-10 flex h-full w-[57%] flex-col justify-center px-5 py-6 sm:px-7">
         <span className="mb-2 text-[10px] font-bold text-secondary-foreground">{s.tag}</span>
