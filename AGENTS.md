@@ -8,3 +8,8 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep storefront presentation in small browser-safe boutique components; retain server functions as the only write boundary.
+- Calculate shipping from stored item-price subtotal for both random draws and complete sets, so the same threshold applies to both.
+- Export myShip rows in the official ten-column layout; file generation does not create a shipment or provide platform verification macros.
+- Use dedicated public content routes for sets, vault and orders, sharing the storefront shell rather than another routing framework.
