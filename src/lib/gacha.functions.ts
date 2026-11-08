@@ -33,7 +33,7 @@ export const listMachines = createServerFn({ method: "GET" }).handler(async () =
 });
 
 type VRow = { id: string; prize_id: string; name: string; image: string; machine_title: string; price: number; drawn_at: string; is_last_one?: boolean };
-const toVault = (r: VRow): VaultItem => ({ vaultId: r.id, id: r.prize_id, name: r.name, image: r.image, machineTitle: r.machine_title, price: r.price, drawnAt: r.drawn_at, isLastOne: r.is_last_one });
+const toVault = (r: VRow): VaultItem => ({ vaultId: r.id, id: r.prize_id, name: r.name, image: r.image, machineTitle: r.machine_title, price: r.price, drawnAt: r.drawn_at, isLastOne: r.is_last_one ?? false });
 
 /** Releases (returns to machine stock) unordered vault items older than the free storage period. */
 async function purgeExpired(db: Awaited<ReturnType<typeof admin>>, deviceId?: string) {
