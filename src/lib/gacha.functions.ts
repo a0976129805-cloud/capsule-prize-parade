@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { useSession } from "@tanstack/react-start/server";
+import { useSession, getRequestHeader } from "@tanstack/react-start/server";
 import { orderTotal, isExpired, VAULT_MS } from "@/lib/shipping";
 import { emptySeller, type Seller } from "@/lib/export711";
 import { validateMachineOrder } from '@/lib/machine-order';
@@ -8,7 +8,7 @@ export type Item = { id: string; name: string; image: string; stock: number };
 export type Machine = { id: string; title: string; price: number; totalStock: number; setPrice: number; coverImage: string; status: string; items: Item[]; lastOneName?: string; lastOneImage?: string; lastOneAwarded?: boolean };
 export type VaultItem = { vaultId: string; id: string; name: string; image: string; machineTitle: string; drawnAt: string; price: number; isLastOne?: boolean };
 export type Shipping = { name: string; phone: string; email: string; storeName: string; storeCode: string };
-export type Order = { id: string; items: VaultItem[]; shipping: Shipping; total: number; fee: number; count: number; createdAt: string; status: string };
+export type Order = { id: string; items: VaultItem[]; shipping: Shipping; total: number; fee: number; count: number; createdAt: string; status: string; discount?: number; couponName?: string };
 
 const admin = () => import("@/integrations/supabase/client.server").then((m) => m.supabaseAdmin);
 const dev = (d: unknown) => String(d ?? "").slice(0, 80);
@@ -75,31 +75,29 @@ export const buySet = createServerFn({ method: "POST" })
 
 /** Ships EVERY unexpired item in the device's vault as one order; partial picking is not allowed. */
 export const createOrder = createServerFn({ method: "POST" })
-  .validator((d: { deviceId: string; shipping: Shipping; agreed: boolean }) => d)
+  .validator((d: { deviceId: string; shipping: Shipping; agreed: boolean; couponId?: string }) => d)
   .handler(async ({ data }) => {
     const s = data.shipping;
     const deviceId = dev(data.deviceId);
     if (!data.agreed) throw new Error("請先同意出貨規則");
     if (!s.name?.trim() || !/^09\d{8}$/.test(s.phone) || !/^\S+@\S+\.\S+$/.test(s.email) || !s.storeName?.trim() || !/^\d{6}$/.test(s.storeCode)) throw new Error("資料不完整");
     const db = await admin();
-    await purgeExpired(db, deviceId);
-    const { data: rows } = await db.from("vault_items").select("*").eq("device_id", deviceId).is("order_id", null);
-    const items = (rows ?? []).filter((r) => !isExpired(r.drawn_at)).map(toVault);
-    if (!items.length) throw new Error("倉庫沒有商品");
-    const { fee, total } = orderTotal(items.map((i) => i.price));
-    const id = "ORD-" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 90 + 10);
-    const { error } = await db.from("orders").insert({
-      id, device_id: deviceId, items: items as never, item_count: items.length, shipping_fee: fee, total,
-      ship_name: s.name.slice(0, 50), ship_phone: s.phone, ship_email: s.email.slice(0, 100), store_name: s.storeName.slice(0, 50), store_code: s.storeCode,
-    });
-    if (error) throw new Error(error.message);
-    await db.from("vault_items").update({ order_id: id }).in("id", items.map((i) => i.vaultId));
-    return { id, total };
+    let userId: string | undefined;
+    if (data.couponId) {
+      const bearer=getRequestHeader('authorization');
+      if(!bearer?.startsWith('Bearer '))throw new Error('使用折價券需登入');
+      const {data:auth,error}=await db.auth.getUser(bearer.slice(7));
+      if(error || !auth.user)throw new Error('請重新登入');
+      userId=auth.user.id;
+    }
+    const {data:result,error}=await db.rpc('checkout_vault',{_device:deviceId,_shipping:s,...(data.couponId?{_coupon:data.couponId,_user:userId}: {})});
+    if(error)throw new Error(error.message);
+    return result as {id:string;total:number;discount:number};
   });
 
-type ORow = { id: string; items: unknown; ship_name: string; ship_phone: string; ship_email: string; store_name: string; store_code: string; total: number; shipping_fee: number; item_count: number; created_at: string; status: string };
+type ORow = { id: string; items: unknown; ship_name: string; ship_phone: string; ship_email: string; store_name: string; store_code: string; total: number; shipping_fee: number; item_count: number; created_at: string; status: string; discount?: number; coupon_name?: string };
 const toOrder = (o: ORow): Order => ({
-  id: o.id, items: o.items as VaultItem[], total: o.total, fee: o.shipping_fee, count: o.item_count || (o.items as unknown[]).length, status: o.status,
+  id: o.id, items: o.items as VaultItem[], total: o.total, fee: o.shipping_fee, count: o.item_count || (o.items as unknown[]).length, status: o.status, discount:o.discount??0,couponName:o.coupon_name??'',
   createdAt: new Date(o.created_at).toLocaleString("zh-TW", { timeZone: "Asia/Taipei" }),
   shipping: { name: o.ship_name, phone: o.ship_phone, email: o.ship_email, storeName: o.store_name, storeCode: o.store_code },
 });
