@@ -298,6 +298,10 @@ export type Database = {
         Args: { _cutoff: string; _device?: string }
         Returns: undefined
       }
+      reorder_machines: {
+        Args: { _expected: string[]; _ids: string[] }
+        Returns: undefined
+      }
       take_stock: { Args: { _n: number; _product: string }; Returns: boolean }
     }
     Enums: {

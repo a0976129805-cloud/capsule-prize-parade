@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { useSession } from "@tanstack/react-start/server";
 import { orderTotal, isExpired, VAULT_MS } from "@/lib/shipping";
 import { emptySeller, type Seller } from "@/lib/export711";
+import { validateMachineOrder } from '@/lib/machine-order';
 
 export type Item = { id: string; name: string; image: string; stock: number };
 export type Machine = { id: string; title: string; price: number; totalStock: number; setPrice: number; coverImage: string; status: string; items: Item[]; lastOneName?: string; lastOneImage?: string; lastOneAwarded?: boolean };
@@ -23,7 +24,7 @@ async function requireAdmin() {
 export const listMachines = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
   const [{ data: p }, { data: z }] = await Promise.all([
-    db.from("products").select("*").order("sort").order("created_at"),
+    db.from("products").select("*").order("sort").order("created_at").order("id"),
     db.from("prizes").select("*").order("sort"),
   ]);
   return (p ?? []).map((m): Machine => {
@@ -139,6 +140,19 @@ export const adminSaveMachine = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     await db.from("prizes").delete().eq("product_id", m.id);
     if (items.length) await db.from("prizes").insert(items.map((it, i) => ({ id: it.id, product_id: m.id, name: it.name, image: it.image, stock: it.stock, sort: i })));
+    return { ok: true };
+  });
+
+export const adminReorderMachines = createServerFn({ method: 'POST' })
+  .inputValidator(validateMachineOrder)
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    const db = await admin();
+    const { error } = await db.rpc('reorder_machines', { _ids: data.ids, _expected: data.expected });
+    if (error) {
+      if (error.message.includes('ORDER_CHANGED')) throw new Error('機台順序已變更，請重新排列');
+      throw new Error('儲存排序失敗，請再試一次');
+    }
     return { ok: true };
   });
 

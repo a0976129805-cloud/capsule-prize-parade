@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 - Keep storefront presentation in small browser-safe boutique components; retain server functions as the only write boundary.
+- Persist owner machine ordering through a session-checked server function and a service-role-only atomic RPC with stale-order detection; update only product sort so stock and prize content remain untouched.
 - Calculate shipping from stored item-price subtotal for both random draws and complete sets, so the same threshold applies to both.
 - Export myShip rows in the official ten-column layout; file generation does not create a shipment or provide platform verification macros.
 - Use dedicated public content routes for sets, vault and orders, sharing the storefront shell rather than another routing framework.

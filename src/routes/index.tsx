@@ -23,6 +23,7 @@ import { repeatDrawCount } from '@/lib/draw-results';
 import { createGachaAudio } from '@/lib/gacha-audio';
 import { PrizeGallery } from '@/components/boutique/prize-gallery';
 import { DrawResultDialog } from '@/components/boutique/draw-result-dialog';
+import { MachineOrderList } from '@/components/boutique/machine-order-list';
 import catLogo from "@/assets/cat-logo.png";
 import {
   Sparkles, Package, ShoppingBag, Settings, RotateCw, ArrowLeft,
@@ -388,7 +389,7 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
   );
 }
 
-function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () => void; flash: (m: string) => void }) {
+function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () => Promise<void>; flash: (m: string) => void }) {
   const [view, setView] = useState<"machines" | "orders" | "seller" | "shop">("machines");
   const [edit, setEdit] = useState<Machine | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -469,14 +470,7 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
         <>
           <Button variant="bare" size="bare" onClick={() => setEdit({ id: "m" + Date.now(), title: "", price: 100, totalStock: 0, setPrice: 0, coverImage: "", status: "熱烈販售中", items: [] })}
             className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Plus className="h-4 w-4" /> 新增扭蛋機</Button>
-          {machines.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2">
-              <img src={m.coverImage} alt="" className="h-14 w-14 rounded-xl bg-muted object-cover" />
-              <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{m.title}</p><p className="text-xs text-muted-foreground">NT${m.price}・庫存 {m.totalStock}・{m.items.length} 款</p></div>
-              <Button variant="bare" size="bare" onClick={() => setEdit(m)} className="p-2 text-muted-foreground"><Edit3 className="h-4 w-4" /></Button>
-              <Button variant="bare" size="bare" onClick={async () => { if (confirm("確定刪除？")) { await delM({ data: { id: m.id } }); reload(); } }} className="p-2 text-destructive"><Trash2 className="h-4 w-4" /></Button>
-            </div>
-          ))}
+          <MachineOrderList machines={machines} reload={reload} flash={flash} onEdit={setEdit} onDelete={async (id) => { if (confirm('確定刪除？')) { await delM({ data: { id } }); await reload(); } }} />
         </>
       ) : (
         <>
