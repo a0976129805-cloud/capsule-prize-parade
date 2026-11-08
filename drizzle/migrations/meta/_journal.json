@@ -64,6 +64,20 @@
       "when": 1794127213104,
       "tag": "0008_member_cat_collection",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794130481054,
+      "tag": "0009_pending_member_collectibles",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794130895164,
+      "tag": "0010_scope_expired_stock_refresh",
+      "breakpoints": true
     }
   ]
 }

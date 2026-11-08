@@ -10,6 +10,7 @@ import { CARD_COUNT, PAGES, cardLabel, pageCards, CARDS } from '@/lib/cat-cards'
 import { myAlbum, memberAlbum, mergeAlbum, claimAlbumPage } from '@/lib/album.functions';
 import { useMember } from './member-session';
 import { CatCardView } from './cat-card';
+import { pendingCardCounts } from '@/lib/pending-cards';
 
 export const albumQueryKey = (device: string, user?: string | null) => user ? ['album', 'member', user, device] : ['album', 'guest', device];
 
@@ -26,21 +27,21 @@ export function CardViewer({ no, onClose, flash }: { no: number; onClose: () => 
   const ref = useRef<HTMLDivElement>(null); const [busy, setBusy] = useState(false);
   const [file, setFile] = useState<File | null>(null); const [preview, setPreview] = useState<string | null>(null);
   const fname = `奶油貓卡-${cardLabel(no)}.png`;
-  useEffect(() => { let alive = true; const t = setTimeout(() => { if (ref.current) renderPng(ref.current).then((b) => { if (alive) setFile(new File([b], fname, { type: 'image/png' })); }).catch(() => {}); }, 900); return () => { alive = false; clearTimeout(t); }; }, [fname]);
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
   const save = async (share: boolean) => {
-    if (!ref.current || busy) return; setBusy(true);
+    if ((!ref.current && !file) || busy) return; setBusy(true);
     try {
-      const f = file ?? new File([await renderPng(ref.current)], fname, { type: 'image/png' }); setFile(f);
-      const r = await shareOrDownload(f, share, { title: '我抽到奶油貓收藏卡！', text: `我在奶油貓ガチャ屋抽到 ${cardLabel(no)} ${CARDS[no - 1]!.name}！` });
+      const f = file ?? new File([await renderPng(ref.current as HTMLDivElement)], fname, { type: 'image/png' }); setFile(f);
+      const r = await shareOrDownload(f, share, { title: '我抽到奶油貓收藏卡！', text: `我在奶油貓ガチャ屋抽到 ${cardLabel(no)} ${CARDS[no - 1]?.name}！` });
       if (r === 'downloaded') { setPreview(URL.createObjectURL(f)); flash(share ? '已產生圖片，可長按圖片儲存或分享' : '卡片已存到下載'); }
     } catch (e) { if (!(e instanceof Error && e.name === 'AbortError')) flash('卡片製作失敗，請再試一次'); } finally { setBusy(false); }
   };
   return <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}><DialogPortal><DialogOverlay className="bg-overlay z-[70]" />
     <DialogPrimitive.Content aria-label="收藏卡大圖" className="fixed left-1/2 top-1/2 z-[70] w-[min(20rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2">
-      <DialogTitle className="sr-only">{cardLabel(no)} {CARDS[no - 1]!.name}</DialogTitle>
+      <DialogTitle className="sr-only">{cardLabel(no)} {CARDS[no - 1]?.name}</DialogTitle>
       <Button variant="secondary" size="icon" aria-label="關閉卡片" onClick={onClose} className="absolute -right-2 -top-12 h-10 w-10 rounded-full"><X /></Button>
       {preview ? <><p className="mb-1 text-center text-xs text-primary-foreground">長按圖片即可儲存或分享</p><img src={preview} alt={`${cardLabel(no)} 卡片圖片`} className="w-full rounded-xl" /></> : <CatCardView ref={ref} no={no} big className="card-reveal" />}
-      <div className="mt-3 grid grid-cols-2 gap-2"><Button variant="secondary" disabled={busy} onClick={() => save(false)}><Download />存到手機</Button><Button disabled={busy} onClick={() => save(true)}><Share2 />{busy ? '製作中…' : file ? '分享給好友' : '準備中…'}</Button></div>
+      <div className="mt-3 grid grid-cols-2 gap-2"><Button variant="secondary" disabled={busy} onClick={() => save(false)}><Download />存到手機</Button><Button disabled={busy} onClick={() => save(true)}><Share2 />{busy ? '製作中…' : file ? '分享給好友' : '製作分享圖'}</Button></div>
     </DialogPrimitive.Content></DialogPortal></Dialog>;
 }
 
@@ -49,6 +50,7 @@ export function CatAlbum({ deviceId, onClose, flash, onLogin }: { deviceId: stri
   const [confirmMerge, setConfirmMerge] = useState(false);
   const [page, setPage] = useState(1); const [view, setView] = useState<number | null>(null); const [busy, setBusy] = useState(false);
   const owned = new Map((album.data?.cards ?? []).map((c) => [c.no, c.copies]));
+  const pending = pendingCardCounts(album.data?.pending ?? []);
   const cards = pageCards(page); const have = cards.filter((c) => owned.has(c.no)).length;
   const claimed = album.data?.claimed.includes(page); const reward = album.data?.reward;
   const mergeCards = async () => {
@@ -64,7 +66,7 @@ export function CatAlbum({ deviceId, onClose, flash, onLogin }: { deviceId: stri
   };
   return <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}><DialogPortal><DialogOverlay className="bg-overlay" />
     <DialogPrimitive.Content aria-label="奶油貓卡冊" className="fixed inset-x-0 bottom-0 top-6 z-50 mx-auto max-w-md overflow-y-auto rounded-t-2xl bg-background p-3 pb-8">
-      <div className="mb-2 flex items-center justify-between"><div><DialogTitle className="text-lg font-bold">📖 奶油貓卡冊</DialogTitle><DialogDescription className="text-xs text-muted-foreground">每顆扭蛋附贈一張貓咪卡・已收集 {owned.size}/{CARD_COUNT}</DialogDescription></div><Button variant="secondary" size="icon" aria-label="關閉卡冊" onClick={onClose} className="h-10 w-10 rounded-full"><X /></Button></div>
+      <div className="mb-2 flex items-center justify-between"><div><DialogTitle className="text-lg font-bold">📖 奶油貓卡冊</DialogTitle><DialogDescription className="text-xs text-muted-foreground">結帳後正式入冊・已收集 {owned.size}/{CARD_COUNT}</DialogDescription></div><Button variant="secondary" size="icon" aria-label="關閉卡冊" onClick={onClose} className="h-10 w-10 rounded-full"><X /></Button></div>
       <div className="mb-3 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${owned.size / CARD_COUNT * 100}%` }} /></div>
       {album.isError && <p role="alert" className="mb-3 text-sm text-destructive">卡冊讀取失敗，請稍後再開啟。</p>}
       {member.userId && (album.data?.guestCount ?? 0) > 0 && <div className="mb-3 border-b border-border pb-3 text-sm">
@@ -80,6 +82,7 @@ export function CatAlbum({ deviceId, onClose, flash, onLogin }: { deviceId: stri
         <div className="album-page grid grid-cols-5 gap-1.5 p-2">
           {album.isLoading ? <p className="col-span-5 py-10 text-center text-xs text-muted-foreground">翻開卡冊中…</p> : cards.map((c) => owned.has(c.no)
             ? <Button key={c.no} variant="ghost" aria-label={`查看 ${cardLabel(c.no)}`} onClick={() => setView(c.no)} className="h-auto min-w-0 p-0 text-left"><CatCardView no={c.no} copies={owned.get(c.no)} /></Button>
+            : pending.has(c.no) ? <div key={c.no} className="relative min-w-0"><CatCardView no={c.no} className="opacity-40 grayscale"/><span className="absolute inset-x-0 bottom-1 bg-background/90 text-center text-[9px] font-bold">待結帳 ×{pending.get(c.no)}</span></div>
             : <div key={c.no} className="cat-card-locked flex aspect-[3/4.6] flex-col items-center justify-center text-muted-foreground"><span className="text-lg">?</span><span className="text-[9px] font-bold">{cardLabel(c.no)}</span></div>)}
         </div>
         <div className="mt-2 flex justify-center gap-1.5">{PAGES.map((_, i) => <button key={i} type="button" aria-label={`第 ${i + 1} 頁`} onClick={() => setPage(i + 1)} className={`h-2 rounded-full transition-all ${page === i + 1 ? 'w-5 bg-accent' : 'w-2 bg-primary-foreground/50'}`} />)}</div>
@@ -88,7 +91,7 @@ export function CatAlbum({ deviceId, onClose, flash, onLogin }: { deviceId: stri
         {claimed ? <p className="text-center font-bold text-primary">✅ 本頁集滿禮已兌換</p>
           : reward?.enabled ? <><p className="font-bold">集滿本頁 10 張可兌換：滿 NT${reward.minimum} 折 NT${reward.amount}</p><Button className="mt-2 w-full rounded-full" disabled={have < 10 || busy} onClick={redeem}>{have < 10 ? `還差 ${10 - have} 張` : member.userId ? '兌換折價券' : '登入會員後兌換'}</Button></>
           : <p className="text-center text-xs text-muted-foreground">集滿一頁的兌換禮準備中，先收集起來吧！</p>}
-        <p className="mt-2 text-[10px] text-muted-foreground">{member.userId ? '會員收藏已保存，換手機登入也能查看；登出後新抽的卡先留在手機，登入後可再確認合併。' : '訪客卡片跟著這支手機保存，登入會員後可確認合併；換手機或清除瀏覽器資料前請先保存。'}收藏卡為附贈數位卡，非實體商品。</p>
+        <p className="mt-2 text-[10px] text-muted-foreground">{member.userId ? '會員收藏已保存，換手機登入也能查看。新卡結帳後解鎖，24 小時未結帳即作廢；待解鎖卡不計入兌券。' : '抽蛋需登入會員；既有手機卡片仍可確認合併。'}收藏卡為附贈數位卡，非實體商品。</p>
         {!member.userId && <Button variant="link" className="mt-1 w-full" onClick={onLogin}>登入會員保存卡冊</Button>}
       </div>
       {view && <CardViewer no={view} onClose={() => setView(null)} flash={flash} />}

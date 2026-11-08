@@ -405,8 +405,10 @@ export type Database = {
           image: string
           is_last_one: boolean
           machine_title: string
+          member_id: string | null
           name: string
           order_id: string | null
+          pending_cards: number[]
           price: number
           prize_id: string
           product_id: string
@@ -418,8 +420,10 @@ export type Database = {
           image?: string
           is_last_one?: boolean
           machine_title?: string
+          member_id?: string | null
           name?: string
           order_id?: string | null
+          pending_cards?: number[]
           price?: number
           prize_id: string
           product_id: string
@@ -431,8 +435,10 @@ export type Database = {
           image?: string
           is_last_one?: boolean
           machine_title?: string
+          member_id?: string | null
           name?: string
           order_id?: string | null
+          pending_cards?: number[]
           price?: number
           prize_id?: string
           product_id?: string
@@ -461,8 +467,10 @@ export type Database = {
           image: string
           is_last_one: boolean
           machine_title: string
+          member_id: string | null
           name: string
           order_id: string | null
+          pending_cards: number[]
           price: number
           prize_id: string
           product_id: string
@@ -483,8 +491,10 @@ export type Database = {
           image: string
           is_last_one: boolean
           machine_title: string
+          member_id: string | null
           name: string
           order_id: string | null
+          pending_cards: number[]
           price: number
           prize_id: string
           product_id: string
@@ -522,8 +532,10 @@ export type Database = {
           image: string
           is_last_one: boolean
           machine_title: string
+          member_id: string | null
           name: string
           order_id: string | null
+          pending_cards: number[]
           price: number
           prize_id: string
           product_id: string
@@ -546,6 +558,36 @@ export type Database = {
       reorder_machines: {
         Args: { _expected: string[]; _ids: string[] }
         Returns: undefined
+      }
+      reserve_member_draw: {
+        Args: {
+          _device: string
+          _nos: number[]
+          _product: string
+          _set?: boolean
+          _user: string
+        }
+        Returns: {
+          device_id: string
+          drawn_at: string
+          id: string
+          image: string
+          is_last_one: boolean
+          machine_title: string
+          member_id: string | null
+          name: string
+          order_id: string | null
+          pending_cards: number[]
+          price: number
+          prize_id: string
+          product_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "vault_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       take_stock: { Args: { _n: number; _product: string }; Returns: boolean }
     }

@@ -19,6 +19,9 @@ describe('cat cards', () => {
     expect(rollCards(5)).toHaveLength(5);
     expect(rollCards(1, () => 0)).toEqual([1]);
   });
+  it('allows duplicate cards rather than completing the album after 50 draws', () => {
+    expect(rollCards(5, () => 0)).toEqual([1, 1, 1, 1, 1]);
+  });
   it('SSR is rarer than N', () => {
     const n = rollCards(20000).map((no) => CARDS[no - 1]!.rarity);
     expect(n.filter((r) => r === 'SSR').length).toBeLessThan(n.filter((r) => r === 'N').length / 5);
