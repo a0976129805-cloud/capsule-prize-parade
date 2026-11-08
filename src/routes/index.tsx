@@ -28,6 +28,7 @@ import { MachineOrderList } from '@/components/boutique/machine-order-list';
 import { RewardWallet, useWallet } from '@/components/boutique/reward-wallet';
 import { RewardSettingsForm } from '@/components/boutique/reward-settings';
 import { useMember } from '@/components/boutique/member-session';
+import { getMemberContact } from '@/lib/member-contact.functions';
 import { bestCoupon, couponDiscount, usableCoupon } from '@/lib/rewards';
 import catLogo from "@/assets/cat-logo.png";
 import {
@@ -102,6 +103,15 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   const [shareItems, setShareItems] = useState<VaultItem[] | null>(null);
   const [phase, setPhase] = useState<null | "coin" | "spin" | "drop" | "open">(null);
   const [ship, setShip] = useState<Shipping>(emptyShip);
+  const readMemberContact = useServerFn(getMemberContact);
+  useEffect(() => {
+    if (!member.ready || !member.userId) return;
+    let active = true;
+    void readMemberContact().then(contact => {
+      if (active) setShip(current => ({ ...current, name: current.name || contact.name, phone: current.phone || contact.phone, email: current.email || contact.email }));
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [member.ready, member.userId, readMemberContact]);
   const [agreed, setAgreed] = useState(false);
   const [picker, setPicker] = useState(false);
   const [sending, setSending] = useState(false);
@@ -224,7 +234,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
         {tab === "home" && !selected && (
           <div className="space-y-4">
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
-            <TrustStrip />
+            <TrustStrip onDaily={() => go('coupons')} />
             <DrawFeed machines={machines} />
             <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><Button variant="secondary" size="sm" className="rounded-full" onClick={() => go('sets')}><ShoppingBag />整套賣場</Button></div>
             {loading && <p className="py-8 text-center text-sm text-muted-foreground">正在載入扭蛋機台…</p>}
