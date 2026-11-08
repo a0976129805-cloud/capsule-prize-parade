@@ -128,6 +128,34 @@ button, input, textarea, select { font-family: inherit; }
 .dock-set-capsule { width: 13px; height: 13px; bottom: 3px; right: 0; border: 1px solid var(--primary); border-radius: 50%; background: linear-gradient(var(--primary) 50%, var(--card) 50%); }
 .dock-set-star { top: -3px; right: 0; font-size: 12px; color: var(--accent-foreground); }
 .share-print { font-family: var(--font-round); }
+.prize-gallery { max-height: 90dvh; }
+.gallery-photo { max-height: 50dvh; }
+.draw-feed-track { scroll-snap-type: x proximity; scrollbar-width: thin; }
+.draw-feed-track article { scroll-snap-align: start; }
+.capsule-stage { display: flex; justify-content: center; align-items: center; gap: 5px; width: min(100%, 340px); height: 120px; margin-top: 12px; }
+.stage-capsule { position: relative; flex: 0 0 58px; height: 58px; --ball-color: var(--capsule-yellow); --sequence: 0s; }
+.stage-capsule-1 { --ball-color: var(--capsule-blue); --sequence: .18s; }
+.stage-capsule-2 { --ball-color: var(--capsule-red); --sequence: .36s; }
+.stage-capsule-3 { --ball-color: var(--capsule-green); --sequence: .54s; }
+.stage-capsule-4 { --ball-color: var(--capsule-yellow); --sequence: .72s; }
+.stage-capsule .capsule-top, .stage-capsule .capsule-bottom { width: 58px; height: 29px; }
+.stage-capsule .capsule-top { background: var(--capsule-reflection), var(--ball-color); }
+.stage-roll { animation: stage-drop .8s cubic-bezier(.22,.68,.3,1) var(--sequence) both; }
+@keyframes stage-drop { 0% { transform: translateY(-100px) scale(.45) rotate(-80deg); opacity: 0; } 45% { transform: translateY(12px) rotate(100deg); opacity: 1; } 65% { transform: translateY(-12px) rotate(150deg); } 85% { transform: translateY(3px) rotate(175deg); } 100% { transform: translateY(0) rotate(180deg); } }
+.stage-open .capsule-top { animation: gm-top-open .45s ease-out var(--sequence) both; }
+.stage-open .capsule-bottom { animation: gm-bot-open .45s ease-out var(--sequence) both; }
+.stage-open .capsule-sparkles { font-size: 20px; width: 90px; left: -16px; animation-delay: var(--sequence); }
+.reveal-rays { position: absolute; inset: -18px; border: 2px dashed var(--accent); border-radius: 50%; animation: reveal-ring .75s ease-out var(--sequence) both; }
+@keyframes reveal-ring { from { opacity: 0; transform: scale(.3) rotate(0deg); } 35% { opacity: 1; } to { opacity: 0; transform: scale(1.5) rotate(45deg); } }
+.reveal-confetti { position: absolute; top: 50%; left: 50%; width: 4px; height: 9px; background: var(--ball-color); --piece-x: 35px; --piece-y: -50px; animation: confetti-pop .9s ease-out var(--sequence) both; }
+.confetti-1 { --piece-x: -38px; --piece-y: -42px; background: var(--accent); }
+.confetti-2 { --piece-x: 20px; --piece-y: -65px; background: var(--card); }
+.confetti-3 { --piece-x: -22px; --piece-y: 34px; background: var(--capsule-green); }
+.confetti-4 { --piece-x: 45px; --piece-y: 25px; background: var(--capsule-red); }
+.confetti-5 { --piece-x: -45px; --piece-y: 10px; background: var(--capsule-blue); }
+@keyframes confetti-pop { from { opacity: 0; transform: translate(0,0) rotate(0deg); } 20% { opacity: 1; } to { opacity: 0; transform: translate(var(--piece-x),var(--piece-y)) rotate(230deg); } }
+@media (max-height: 650px) { .gacha-machine { zoom: .72; } .capsule-stage { height: 85px; margin-top: 5px; } }
+@media (max-width: 360px) { .capsule-stage { gap: 1px; } .stage-capsule { zoom: .9; } }
 .dock-globe { width: 22px; height: 19px; border: 2px solid var(--primary); background: var(--card); border-radius: 50% 50% 20% 20%; left: 6px; top: 0; }
 .dock-globe::after { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); left: 4px; top: 5px; box-shadow: 6px 3px var(--secondary-foreground); }
 .dock-base { width: 24px; height: 13px; background: var(--primary); border-radius: 3px; left: 5px; bottom: 0; }

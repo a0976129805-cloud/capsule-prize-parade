@@ -20,10 +20,12 @@ import { buildMyshipRows } from "@/lib/exportMyship";
 import { DrawFeed } from '@/components/boutique/draw-feed';
 import { ShareCard } from '@/components/boutique/share-card';
 import { repeatDrawCount } from '@/lib/draw-results';
+import { createGachaAudio } from '@/lib/gacha-audio';
+import { PrizeGallery } from '@/components/boutique/prize-gallery';
 import catLogo from "@/assets/cat-logo.png";
 import {
   Sparkles, Package, ShoppingBag, Settings, RotateCw, ArrowLeft,
-  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle, Menu, Upload, MessageCircle, Instagram, BookOpen, ShieldCheck, Lock, Share2, Gift,
+  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle, Menu, Upload, MessageCircle, Instagram, BookOpen, ShieldCheck, Lock, Share2, Gift, Volume2, VolumeX, ZoomIn,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -68,6 +70,23 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   const [customerStatus, setCustomerStatus] = useState("全部");
   const skipRef = useRef<(() => void) | null>(null);
   const [skipped, setSkipped] = useState(false);
+  const [animationCount, setAnimationCount] = useState(1);
+  const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
+  const [sound, setSound] = useState(false);
+  const soundRef = useRef(false);
+  const audioRef = useRef<ReturnType<typeof createGachaAudio> | null>(null);
+  const soundCue = (cue: 'turn' | 'drop' | 'reveal', count = 1) => { if (soundRef.current) audioRef.current?.play(cue, count); };
+  const toggleSound = () => {
+    const next = !soundRef.current;
+    soundRef.current = next; setSound(next);
+    try { localStorage.setItem('gacha-sound', next ? 'on' : 'off'); } catch { /* Storage may be restricted. */ }
+    if (next) { audioRef.current ??= createGachaAudio(); audioRef.current.unlock(); }
+    else audioRef.current?.stop();
+  };
+  useEffect(() => {
+    try { const enabled = localStorage.getItem('gacha-sound') === 'on'; soundRef.current = enabled; setSound(enabled); } catch { /* Default is quiet. */ }
+    return () => { audioRef.current?.dispose(); skipRef.current?.(); };
+  }, []);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<VaultItem[] | null>(null);
   const [shareItems, setShareItems] = useState<VaultItem[] | null>(null);
@@ -128,14 +147,17 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   const draw = async (count: number) => {
     if (!selected || selected.totalStock < count) return flash("庫存不足！");
     if (spinning) return;
-    setSpinning(true); setSkipped(false);
+    setSpinning(true); setSkipped(false); setAnimationCount(count);
+    if (soundRef.current) { audioRef.current ??= createGachaAudio(); audioRef.current.unlock(); }
+    soundCue('turn');
     setPhase("spin");
     const req = doDraw({ data: { machineId: selected.id, count, deviceId: getDeviceId() } }).catch(() => ({ ok: false as const, error: "連線失敗，請再試一次" }));
-    const t1 = setTimeout(() => setPhase("drop"), 1600);
-    const t2 = setTimeout(() => setPhase("open"), 2500);
+    const dropDuration = count === 5 ? 1600 : 950;
+    const t1 = setTimeout(() => { setPhase("drop"); soundCue('drop', count); }, 1600);
+    const t2 = setTimeout(() => { setPhase("open"); }, 1600 + dropDuration);
     const animation = new Promise<void>((resolve) => {
-      const t3 = setTimeout(resolve, 3200);
-      skipRef.current = () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); setSkipped(true); resolve(); };
+      const t3 = setTimeout(resolve, 1600 + dropDuration + (count === 5 ? 1500 : 850));
+      skipRef.current = () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); audioRef.current?.stop(); setSkipped(true); resolve(); };
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) skipRef.current();
     });
     const [r] = await Promise.all([req, animation]);
@@ -145,6 +167,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
     reloadMachines();
     setSpinning(false);
     setPhase(null);
+    audioRef.current?.stop();
+    soundCue('reveal');
     setResult(r.items);
   };
 
@@ -173,7 +197,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
             <img src={catLogo} alt="クリームキャット" width={40} height={40} className="h-10 w-10 rounded-full bg-card object-contain p-0.5" />
             <span className="text-left"><span className="block text-sm font-bold">奶油貓 扭蛋屋</span><span className="block text-[10px] font-medium">クリームキャット ガチャ屋</span></span>
           </Button>
-          <Button variant="bare" size="bare" onClick={() => setMenu(true)} aria-label="選單" className="rounded-full p-2 hover:bg-primary-foreground/15"><Menu className="h-6 w-6" /></Button>
+          <div className="flex items-center gap-1"><Button variant="bare" size="bare" onClick={toggleSound} aria-label={sound ? '關閉扭蛋音效' : '開啟扭蛋音效'} aria-pressed={sound} title={sound ? '關閉扭蛋音效' : '開啟扭蛋音效'} className="rounded-full p-2 hover:bg-primary-foreground/15">{sound ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}</Button><Button variant="bare" size="bare" onClick={() => setMenu(true)} aria-label="選單" className="rounded-full p-2 hover:bg-primary-foreground/15"><Menu className="h-6 w-6" /></Button></div>
         </div>
         {info.marquee && <div className="overflow-hidden bg-accent py-1 text-xs font-bold text-accent-foreground"><div className="animate-marquee">📢 {info.marquee}</div></div>}
       </header>
@@ -183,7 +207,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
           <div className="space-y-4">
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
             <TrustStrip />
-            <DrawFeed />
+            <DrawFeed machines={machines} />
             <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><Button variant="secondary" size="sm" className="rounded-full" onClick={() => go('sets')}><ShoppingBag />整套賣場</Button></div>
             {loading && <p className="py-8 text-center text-sm text-muted-foreground">正在載入扭蛋機台…</p>}
             {loadError && <Button variant="outline" className="w-full" onClick={reloadMachines}>讀取失敗・重新載入</Button>}
@@ -247,13 +271,14 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
             <div>
               <p className="mb-2 font-bold">全款式一覽</p>
               <div className="grid grid-cols-3 gap-2">
-                {selected.items.map((it) => (
-                  <div key={it.id} className={`relative overflow-hidden rounded-lg border border-border bg-card ${it.stock <= 0 ? "opacity-50 grayscale" : ""}`}>
+                {selected.items.map((it, index) => (
+                  <Button variant="bare" size="bare" onClick={() => setGalleryIndex(index)} aria-label={`查看 ${it.name} 大圖`} key={it.id} className={`relative flex flex-col items-stretch overflow-hidden rounded-lg border border-border bg-card text-left ${it.stock <= 0 ? "opacity-50" : ""}`}>
                     <img src={it.image} alt={it.name} className="aspect-square w-full object-cover" />
+                    <span className="absolute right-1 top-1 rounded-full bg-card/90 p-1 text-muted-foreground"><ZoomIn className="h-3.5 w-3.5" /></span>
                     {it.stock <= 0 && <span className="absolute inset-x-0 top-1/3 bg-foreground/70 py-1 text-center text-xs font-bold text-background">已完售</span>}
-                    <p className="px-1.5 pt-1.5 text-xs">{it.name}</p>
+                    <p className="whitespace-normal px-1.5 pt-1.5 text-xs">{it.name}</p>
                     <p className={`px-1.5 pb-1.5 text-[10px] font-bold ${it.stock > 0 && it.stock <= 2 ? "text-destructive" : "text-muted-foreground"}`}>剩餘 {it.stock} 顆</p>
-                  </div>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -330,7 +355,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       {menu && <SideMenu info={info} onClose={() => setMenu(false)} go={(t) => { go(t); setMenu(false); }} />}
 
       {setMachine && <SetPopup machine={setMachine} busy={buying} onBuy={purchaseSet} onClose={() => setSetMachine(null)} />}
-      {phase && <GachaScene phase={phase} skipped={skipped} onSkip={() => skipRef.current?.()} />}
+      {galleryIndex !== null && selected && <PrizeGallery machine={selected} index={galleryIndex} onIndex={setGalleryIndex} onClose={() => setGalleryIndex(null)} onDraw={() => { setGalleryIndex(null); draw(1); }} />}
+      {phase && <GachaScene phase={phase} count={animationCount} sound={sound} onSound={toggleSound} skipped={skipped} onSkip={() => skipRef.current?.()} />}
 
       {result && (
         <div className="bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
