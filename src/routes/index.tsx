@@ -34,7 +34,6 @@ import catLogo from "@/assets/cat-logo.png";
 import { CatAlbum, albumQueryKey } from "@/components/boutique/cat-album";
 import { cardLabel } from "@/lib/cat-cards";
 import { useQueryClient } from "@tanstack/react-query";
-import { BookOpen } from "lucide-react";
 import {
   Sparkles, Package, ShoppingBag, Settings, RotateCw, ArrowLeft,
   Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle, Menu, Upload, MessageCircle, Instagram, BookOpen, ShieldCheck, Lock, Share2, Gift, Volume2, VolumeX, ZoomIn,
@@ -174,7 +173,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       setSetMachine(null);
       setNewCards(r.cards ?? []); refreshAlbum();
       if (r.items.some((i) => i.isLastOne)) { setResult(r.items); return; }
-      if (r.cards?.length) flash(`🐾 獲得貓咪收藏卡 ${cardLabel(r.cards[0])}！已收進卡冊`);
+      if (r.cards?.length) flash(`🐾 獲得貓咪收藏卡 ${cardLabel(r.cards[0]!)}！已收進卡冊`);
       go('vault');
       flash("全套已保留，請填寫收件資料完成整倉出貨");
     } catch { flash("購買失敗，請再試一次"); }
