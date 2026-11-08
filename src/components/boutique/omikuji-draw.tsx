@@ -18,8 +18,7 @@ export function OmikujiDraw({ state, onClose }: { state: OmikujiState | null; on
         {shaking && <p role="status" className="font-bold">カラカラ… 正在搖籤</p>}
         {state?.phase === 'result' && <div className="omikuji-paper mx-auto max-w-[14rem] rounded-sm border-2 border-primary bg-card px-4 py-5">
           <p className="text-xs font-bold text-primary">御神籤</p>
-          <p className="mt-2 text-3xl font-bold tracking-widest text-primary">大吉</p>
-          <p className="mt-3 font-bold">{state.title}</p>
+          <p className="mt-2 text-3xl font-bold tracking-widest text-primary">{state.title}</p>
           <p className="mt-1 text-xs text-muted-foreground">{state.detail}</p>
         </div>}
         {state?.phase === 'error' && <p className="text-sm text-muted-foreground">{state.detail}</p>}

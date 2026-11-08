@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, PackageCheck, ShieldCheck, Truck, X, ShoppingBag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Truck, X, ShoppingBag } from 'lucide-react';
+import { trustArt } from './trust-art';
 import { TrustInfoDialog, type TrustTopic } from './trust-info';
 import shrine from '@/assets/omikuji-shrine.jpg';
 import type { Machine } from '@/lib/gacha.functions';
@@ -53,12 +54,17 @@ export function ShippingProgress({ subtotal }: { subtotal: number }) {
 
 export function TrustStrip({ onDaily }: { onDaily?: () => void }) {
   const [topic, setTopic] = useState<TrustTopic | null>(null);
-  const item = 'flex min-w-0 flex-col items-center gap-1 rounded-lg py-1 text-[10px] text-muted-foreground active:bg-muted';
-  return <><div className={`grid ${onDaily ? 'grid-cols-4' : 'grid-cols-3'} gap-1 border-y border-border py-2 text-center`}>
-    <Button variant="bare" size="bare" className={item} onClick={() => setTopic('cod')}><ShieldCheck className="h-4 w-4 text-secondary-foreground" />7-11 貨到付款</Button>
-    <Button variant="bare" size="bare" className={item} onClick={() => setTopic('genuine')}><PackageCheck className="h-4 w-4 text-secondary-foreground" />日本正版扭蛋</Button>
-    {onDaily && <Button variant="bare" size="bare" className={`${item} font-bold text-primary`} onClick={onDaily}><img src={shrine} alt="" width={1024} height={768} className="h-5 w-7 rounded object-cover" />每日御神籤</Button>}
-    <Button variant="bare" size="bare" className={item} onClick={() => setTopic('shipping')}><Truck className="h-4 w-4 text-secondary-foreground" />全館滿千免運</Button>
+  const tiles: { key: string; label: string; img: string; click: () => void; hot?: boolean }[] = [
+    { key: 'cod', label: '7-11 貨到付款', img: trustArt.cod, click: () => setTopic('cod') },
+    { key: 'genuine', label: '日本正版扭蛋', img: trustArt.genuine, click: () => setTopic('genuine') },
+    ...(onDaily ? [{ key: 'daily', label: '每日御神籤', img: shrine, click: onDaily, hot: true }] : []),
+    { key: 'shipping', label: '全館滿千免運', img: trustArt.shipping, click: () => setTopic('shipping') },
+  ];
+  return <><div className={`grid ${onDaily ? 'grid-cols-4' : 'grid-cols-3'} gap-2 border-y border-border py-3`}>
+    {tiles.map((t) => <Button key={t.key} variant="bare" size="bare" onClick={t.click} className={`flex min-w-0 flex-col items-stretch gap-1 rounded-xl p-1 text-[11px] font-bold active:scale-95 transition-transform ${t.hot ? 'bg-secondary text-primary' : 'text-foreground'}`}>
+      <img src={t.img} alt="" width={1024} height={768} loading="lazy" className="aspect-square w-full rounded-lg object-cover" />
+      <span className="truncate text-center">{t.label}</span>
+    </Button>)}
   </div><TrustInfoDialog topic={topic} onClose={() => setTopic(null)} /></>;
 }
 
