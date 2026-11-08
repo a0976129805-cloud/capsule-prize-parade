@@ -21,3 +21,5 @@
 - Keep optional synthesized gacha audio gesture-initialized and local to the browser; activity thumbnails match current public product summaries without adding customer data.
 - Share gacha phase timing between the browser animation controller and audio scheduling; cancel pending cues on skip, mute, failure and dismissal to prevent overlapping effects.
 - Use the shared Radix result dialog for dismissal and focus trapping; display scarcity from actual remaining stock, not invented percentage baselines.
+- Keep member coupons account-owned with read-only owner RLS; issue rewards and consume one coupon within service-role-only locked RPCs after validating the member session. Store discount snapshots in orders and keep shipping based on pre-discount stored item prices.
+- Keep storefront browsing public and member state in one root session context; do not migrate device-owned vaults or orders implicitly when introducing member rewards.

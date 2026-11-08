@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CouponsRouteImport } from './routes/coupons'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as SetsRouteImport } from './routes/sets'
 import { Route as VaultRouteImport } from './routes/vault'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CouponsRoute = CouponsRouteImport.update({
+  id: '/coupons',
+  path: '/coupons',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrdersRoute = OrdersRouteImport.update({
@@ -50,6 +56,7 @@ const ApiPublicImgSplatRoute = ApiPublicImgSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/coupons': typeof CouponsRoute
   '/orders': typeof OrdersRoute
   '/sets': typeof SetsRoute
   '/vault': typeof VaultRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/coupons': typeof CouponsRoute
   '/orders': typeof OrdersRoute
   '/sets': typeof SetsRoute
   '/vault': typeof VaultRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/coupons': typeof CouponsRoute
   '/orders': typeof OrdersRoute
   '/sets': typeof SetsRoute
   '/vault': typeof VaultRoute
@@ -75,13 +84,27 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/orders' | '/sets' | '/vault' | '/api/public/img/$'
+    | '/'
+    | '/auth'
+    | '/coupons'
+    | '/orders'
+    | '/sets'
+    | '/vault'
+    | '/api/public/img/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/orders' | '/sets' | '/vault' | '/api/public/img/$'
+  to:
+    | '/'
+    | '/auth'
+    | '/coupons'
+    | '/orders'
+    | '/sets'
+    | '/vault'
+    | '/api/public/img/$'
   id:
     | '__root__'
     | '/'
     | '/auth'
+    | '/coupons'
     | '/orders'
     | '/sets'
     | '/vault'
@@ -91,6 +114,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  CouponsRoute: typeof CouponsRoute
   OrdersRoute: typeof OrdersRoute
   SetsRoute: typeof SetsRoute
   VaultRoute: typeof VaultRoute
@@ -111,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/coupons': {
+      id: '/coupons'
+      path: '/coupons'
+      fullPath: '/coupons'
+      preLoaderRoute: typeof CouponsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/orders': {
@@ -147,6 +178,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  CouponsRoute: CouponsRoute,
   OrdersRoute: OrdersRoute,
   SetsRoute: SetsRoute,
   VaultRoute: VaultRoute,

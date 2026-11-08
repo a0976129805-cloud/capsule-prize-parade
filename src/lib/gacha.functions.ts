@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { useSession, getRequestHeader } from "@tanstack/react-start/server";
-import { orderTotal, isExpired, VAULT_MS } from "@/lib/shipping";
+import { VAULT_MS } from "@/lib/shipping";
 import { emptySeller, type Seller } from "@/lib/export711";
 import { validateMachineOrder } from '@/lib/machine-order';
 
