@@ -24,3 +24,4 @@
 - Keep member coupons account-owned with read-only owner RLS; issue rewards and consume one coupon within service-role-only locked RPCs after validating the member session. Store discount snapshots in orders and keep shipping based on pre-discount stored item prices.
 - Keep storefront browsing public and member state in one root session context; do not migrate device-owned vaults or orders implicitly when introducing member rewards.
 - Store member contact fields in owner-scoped profiles through authenticated server functions; derive Email from verified auth, never use phone as an identity credential, and preserve edited checkout fields when prefilling.
+- Cat collectible cards drop server-side inside draw/set server functions (device-owned, service-role-only tables); page-completion coupons are issued only by a locked RPC after member session check, once per device and per member.
