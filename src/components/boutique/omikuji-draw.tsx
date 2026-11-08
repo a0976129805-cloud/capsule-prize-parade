@@ -1,28 +1,81 @@
+import { useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import shrine from '@/assets/omikuji-shrine.jpg';
 
-export type OmikujiState = { phase: 'shaking' } | { phase: 'result'; title: string; detail: string } | { phase: 'error'; detail: string };
+export type OmikujiState = { phase: 'ready' } | { phase: 'shaking' } | { phase: 'result'; title: string; detail: string } | { phase: 'error'; detail: string };
 
-export function OmikujiDraw({ state, onClose }: { state: OmikujiState | null; onClose: () => void }) {
-  const shaking = state?.phase === 'shaking';
-  return <Dialog open={!!state} onOpenChange={(o) => { if (!o && !shaking) onClose(); }}>
-    <DialogContent className="max-w-sm overflow-hidden rounded-2xl p-0" onInteractOutside={(e) => { if (shaking) e.preventDefault(); }}>
+let ctx: AudioContext | null = null;
+function audio() {
+  if (typeof window === 'undefined') return null;
+  try { ctx ??= new AudioContext(); if (ctx.state === 'suspended') void ctx.resume(); return ctx; } catch { return null; }
+}
+function knock(a: AudioContext, t: number, freq: number, vol = 0.18) {
+  const o = a.createOscillator(); const g = a.createGain(); const f = a.createBiquadFilter();
+  f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 6;
+  o.type = 'triangle'; o.frequency.setValueAtTime(freq, t); o.frequency.exponentialRampToValueAtTime(freq * 0.6, t + 0.06);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+  o.connect(f).connect(g).connect(a.destination); o.start(t); o.stop(t + 0.1);
+}
+function rattle(a: AudioContext) {
+  const t0 = a.currentTime;
+  for (let i = 0; i < 22; i++) knock(a, t0 + i * 0.085 + Math.random() * 0.03, 700 + Math.random() * 900, 0.12 + Math.random() * 0.08);
+}
+function popAndChime(a: AudioContext) {
+  const t = a.currentTime;
+  knock(a, t, 520, 0.3);
+  [784, 988, 1175, 1568].forEach((f, i) => {
+    const o = a.createOscillator(); const g = a.createGain(); const s = t + 0.25 + i * 0.12;
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(0.16, s + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, s + 1.2);
+    o.connect(g).connect(a.destination); o.start(s); o.stop(s + 1.3);
+  });
+}
+
+function Tube({ shaking, revealed }: { shaking: boolean; revealed: boolean }) {
+  return <div className={`relative mx-auto h-40 w-24 ${shaking ? 'omikuji-tube-shake' : ''}`} style={{ transformOrigin: '50% 90%' }}>
+    {revealed && <div className="omikuji-stick-out absolute left-1/2 top-0 z-0 h-24 w-3 -translate-x-1/2 rounded-sm border border-border bg-card shadow">
+      <span className="absolute inset-x-0 top-1 h-4 rounded-sm bg-primary" />
+    </div>}
+    <div className="absolute inset-x-0 bottom-0 z-10 flex h-32 flex-col items-center justify-center rounded-t-md rounded-b-lg border-4 border-primary bg-secondary shadow-lg">
+      <span className="mt-1 h-1.5 w-6 rounded-full bg-foreground/70" />
+      <span className="mt-3 text-lg font-bold leading-tight tracking-[0.3em] text-primary [writing-mode:vertical-rl]">御神籤</span>
+    </div>
+  </div>;
+}
+
+export function OmikujiDraw({ state, onShake, onClose }: { state: OmikujiState | null; onShake: () => void; onClose: () => void }) {
+  const phase = state?.phase;
+  const locked = phase === 'shaking';
+  const played = useRef(false);
+  useEffect(() => {
+    if (phase === 'result' && !played.current) { played.current = true; const a = audio(); if (a) popAndChime(a); }
+    if (phase !== 'result') played.current = false;
+  }, [phase]);
+  const shake = () => { const a = audio(); if (a) rattle(a); onShake(); };
+  return <Dialog open={!!state} onOpenChange={(o) => { if (!o && !locked) onClose(); }}>
+    <DialogContent className="max-w-sm overflow-hidden rounded-2xl p-0" onInteractOutside={(e) => { if (locked) e.preventDefault(); }}>
       <DialogTitle className="sr-only">每日御神籤</DialogTitle>
-      <DialogDescription className="sr-only">搖籤結果</DialogDescription>
-      <div className="relative">
-        <img src={shrine} alt="奶油貓神社與御神籤箱" width={1024} height={768} className={`aspect-[4/3] w-full object-cover ${shaking ? 'omikuji-shake' : ''}`} />
-        {shaking && <div className="omikuji-stick absolute left-[33%] top-[40%] h-16 w-2 rounded-sm bg-card shadow" aria-hidden />}
-      </div>
+      <DialogDescription className="sr-only">點籤筒搖出今日的籤</DialogDescription>
+      <img src={shrine} alt="" width={1024} height={768} className="aspect-[3/1] w-full object-cover" />
       <div className="p-5 text-center">
-        {shaking && <p role="status" className="font-bold">カラカラ… 正在搖籤</p>}
-        {state?.phase === 'result' && <div className="omikuji-paper mx-auto max-w-[14rem] rounded-sm border-2 border-primary bg-card px-4 py-5">
-          <p className="text-xs font-bold text-primary">御神籤</p>
-          <p className="mt-2 text-3xl font-bold tracking-widest text-primary">{state.title}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{state.detail}</p>
-        </div>}
-        {state?.phase === 'error' && <p className="text-sm text-muted-foreground">{state.detail}</p>}
-        {!shaking && <Button className="mt-4 w-full" onClick={onClose}>收下・回到票夾</Button>}
+        {phase !== 'error' && phase !== 'result' && <>
+          {phase === 'ready' && <div className="omikuji-arrow mb-1 text-sm font-bold text-primary" aria-hidden>點籤筒搖一搖 ▼</div>}
+          <button type="button" disabled={phase !== 'ready'} onClick={shake} aria-label="點擊籤筒搖籤" className="rounded-xl p-2 focus-visible:outline-2 focus-visible:outline-primary">
+            <Tube shaking={phase === 'shaking'} revealed={false} />
+          </button>
+          {phase === 'shaking' && <p role="status" className="mt-2 font-bold">カラカラ… 正在搖籤</p>}
+        </>}
+        {phase === 'result' && <>
+          <Tube shaking={false} revealed />
+          <div className="omikuji-paper mx-auto mt-3 max-w-[14rem] rounded-sm border-2 border-primary bg-card px-4 py-5">
+            <p className="text-xs font-bold text-primary">御神籤</p>
+            <p className="mt-2 text-3xl font-bold tracking-widest text-primary">{state.title}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{state.detail}</p>
+          </div>
+        </>}
+        {phase === 'error' && <p className="text-sm text-muted-foreground">{state.detail}</p>}
+        {(phase === 'result' || phase === 'error') && <Button className="mt-4 w-full" onClick={onClose}>收下・回到票夾</Button>}
       </div>
     </DialogContent>
   </Dialog>;
