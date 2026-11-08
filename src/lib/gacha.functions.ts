@@ -5,9 +5,18 @@ import { emptySeller, type Seller } from "@/lib/export711";
 import { validateMachineOrder } from '@/lib/machine-order';
 import { rollCards } from '@/lib/cat-cards';
 
-async function dropCards(db: Awaited<ReturnType<typeof admin>>, device: string, n: number) {
+async function optionalMember(db: Awaited<ReturnType<typeof admin>>) {
+  const bearer = getRequestHeader('authorization');
+  if (!bearer) return undefined;
+  if (!bearer.startsWith('Bearer ')) throw new Error('請重新登入');
+  const { data, error } = await db.auth.getUser(bearer.slice(7));
+  if (error || !data.user) throw new Error('請重新登入');
+  return data.user.id;
+}
+
+async function dropCards(db: Awaited<ReturnType<typeof admin>>, device: string, n: number, user?: string) {
   const nos = rollCards(n);
-  const { error } = await db.rpc("add_cat_cards", { _device: device, _nos: nos });
+  const { error } = await db.rpc("add_cat_cards_routed", { _device: device, _nos: nos, ...(user ? { _user: user } : {}) });
   return error ? [] : nos;
 }
 
@@ -63,10 +72,11 @@ export const drawPrizes = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!data.deviceId) return { ok: false as const, error: "裝置識別失敗" };
     const db = await admin();
+    const user = await optionalMember(db);
     const { data: rows, error } = await db.rpc("draw_prizes", { _product: data.machineId, _n: data.count, _device: data.deviceId });
     if (error) return { ok: false as const, error: "抽獎失敗，請再試一次" };
     if (!rows?.length) return { ok: false as const, error: "庫存不足！" };
-    return { ok: true as const, items: (rows as VRow[]).map(toVault), cards: await dropCards(db, data.deviceId, rows.length) };
+    return { ok: true as const, items: (rows as VRow[]).map(toVault), cards: await dropCards(db, data.deviceId, rows.length, user) };
   });
 
 export const buySet = createServerFn({ method: "POST" })
@@ -74,10 +84,11 @@ export const buySet = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!data.deviceId) return { ok: false as const, error: "裝置識別失敗" };
     const db = await admin();
+    const user = await optionalMember(db);
     const { data: rows, error } = await db.rpc("buy_set", { _product: data.machineId, _device: data.deviceId });
     if (error) return { ok: false as const, error: "購買失敗，請再試一次" };
     if (!rows?.length) return { ok: false as const, error: "整套已無法購買（有款式售完）" };
-    return { ok: true as const, items: (rows as VRow[]).map(toVault), cards: await dropCards(db, data.deviceId, 1) };
+    return { ok: true as const, items: (rows as VRow[]).map(toVault), cards: await dropCards(db, data.deviceId, 1, user) };
   });
 
 /** Ships EVERY unexpired item in the device's vault as one order; partial picking is not allowed. */
