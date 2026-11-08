@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      album_claims: {
+        Row: {
+          created_at: string
+          device_id: string
+          page: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          page: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          page?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cat_cards: {
+        Row: {
+          card_no: number
+          copies: number
+          device_id: string
+          first_at: string
+        }
+        Insert: {
+          card_no: number
+          copies?: number
+          device_id: string
+          first_at?: string
+        }
+        Update: {
+          card_no?: number
+          copies?: number
+          device_id?: string
+          first_at?: string
+        }
+        Relationships: []
+      }
       draw_events: {
         Row: {
           created_at: string
@@ -330,6 +372,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_cat_cards: {
+        Args: { _device: string; _nos: number[] }
+        Returns: undefined
+      }
       award_last_one: {
         Args: { _device: string; _product: string }
         Returns: {
@@ -381,6 +427,10 @@ export type Database = {
           _shipping: Json
           _user?: string
         }
+        Returns: Json
+      }
+      claim_album_page: {
+        Args: { _device: string; _page: number; _user: string }
         Returns: Json
       }
       claim_member_reward: {

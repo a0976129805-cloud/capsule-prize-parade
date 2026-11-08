@@ -50,6 +50,13 @@
       "when": 1794121031158,
       "tag": "0006_member_contact_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794125811569,
+      "tag": "0007_cat_card_album",
+      "breakpoints": true
     }
   ]
 }
