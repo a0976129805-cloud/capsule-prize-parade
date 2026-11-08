@@ -77,7 +77,7 @@ export const buySet = createServerFn({ method: "POST" })
     const { data: rows, error } = await db.rpc("buy_set", { _product: data.machineId, _device: data.deviceId });
     if (error) return { ok: false as const, error: "購買失敗，請再試一次" };
     if (!rows?.length) return { ok: false as const, error: "整套已無法購買（有款式售完）" };
-    return { ok: true as const, items: (rows as VRow[]).map(toVault) };
+    return { ok: true as const, items: (rows as VRow[]).map(toVault), cards: await dropCards(db, data.deviceId, 1) };
   });
 
 /** Ships EVERY unexpired item in the device's vault as one order; partial picking is not allowed. */
