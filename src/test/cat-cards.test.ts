@@ -3,6 +3,14 @@ import { CARDS, pageCards, rollCards } from '@/lib/cat-cards';
 import { emptyRewards, rewardSettingsSchema } from '@/lib/rewards';
 
 describe('cat cards', () => {
+  it('gives each of the five named cats ten unique images and one SSR prince', () => {
+    for (const cat of ['球球', '仙草', '豆花', '粉圓', '奶油']) {
+      const cards = CARDS.filter(c => c.cat === cat);
+      expect(cards).toHaveLength(10);
+      expect(cards.filter(c => c.rarity === 'SSR').map(c => c.name)).toEqual([`${cat}・小小王子`]);
+    }
+    expect(new Set(CARDS.map(c => c.art)).size).toBe(50);
+  });
   it('has 50 numbered cards across 5 pages of 10', () => {
     expect(CARDS).toHaveLength(50);
     expect([1, 2, 3, 4, 5].map((p) => pageCards(p).length)).toEqual([10, 10, 10, 10, 10]);

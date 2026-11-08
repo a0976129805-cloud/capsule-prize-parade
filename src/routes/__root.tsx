@@ -121,6 +121,7 @@ function RootComponent() {
     supabase.auth.getUser().then(({data})=>setMember({userId:data.user?.id??null,ready:true}));
     const {data:{subscription}}=supabase.auth.onAuthStateChange((event,session)=>{
       if(!['SIGNED_IN','SIGNED_OUT','USER_UPDATED'].includes(event))return;
+      queryClient.removeQueries({queryKey:['album','member']});
       setMember({userId:session?.user.id??null,ready:true});
       router.invalidate();
       if(event!=='SIGNED_OUT')queryClient.invalidateQueries();
