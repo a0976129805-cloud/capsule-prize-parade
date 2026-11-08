@@ -33,6 +33,16 @@ function popAndChime(a: AudioContext) {
   });
 }
 
+const BLESSINGS: Record<string, { ja: string; zh: string }> = {
+  超大吉: { ja: '最高の幸運が舞い込みます！', zh: '天大好運降臨，今天做什麼都順利！' },
+  大吉: { ja: '願い事が叶う予感がします。', zh: '心想事成，好事即將發生。' },
+  中吉: { ja: '小さな幸せがたくさん届きます。', zh: '小確幸接連而來，保持好心情。' },
+  吉: { ja: '穏やかで良い一日になりますように。', zh: '平安順心，祝你有美好的一天。' },
+};
+export function blessingFor(title: string) {
+  return BLESSINGS[title] ?? Object.entries(BLESSINGS).find(([k]) => title.includes(k))?.[1] ?? BLESSINGS['吉'];
+}
+
 function Tube({ shaking, revealed }: { shaking: boolean; revealed: boolean }) {
   return <div className={`relative mx-auto w-32 ${shaking ? 'omikuji-tube-shake' : ''}`} style={{ transformOrigin: '50% 90%' }}>
     {revealed && <div className="omikuji-stick-out absolute left-1/2 top-0 z-0 h-20 w-2.5 -translate-x-1/2 rounded-sm border border-border bg-card shadow">
@@ -69,7 +79,8 @@ export function OmikujiDraw({ state, onShake, onClose }: { state: OmikujiState |
           <div className="omikuji-paper mx-auto mt-3 max-w-[14rem] rounded-sm border-2 border-primary bg-card px-4 py-5">
             <p className="text-xs font-bold text-primary">御神籤</p>
             <p className="mt-2 text-3xl font-bold tracking-widest text-primary">{state?.phase==="result"&&state.title}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{state && "detail" in state && state.detail}</p>
+            {state?.phase === 'result' && (() => { const b = blessingFor(state.title); return <div className="mt-3 border-t border-dashed border-primary/40 pt-3"><p className="text-sm font-bold">{b.ja}</p><p className="mt-1 text-xs">{b.zh}</p></div>; })()}
+            <p className="mt-2 text-xs text-muted-foreground">{state && "detail" in state && state.detail}</p>
           </div>
         </>}
         {phase === 'error' && <p className="text-sm text-muted-foreground">{state && "detail" in state && state.detail}</p>}
