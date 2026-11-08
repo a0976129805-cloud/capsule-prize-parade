@@ -57,6 +57,7 @@ export const myVault = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const db = await admin();
     const user = await optionalMember(db);
+    if (!user && data.deviceId.startsWith('member:')) throw new Error('請先登入會員');
     const owner = user ? `member:${user}` : data.deviceId;
     await purgeExpired(db, owner);
     const { data: rows } = await db.from("vault_items").select("*").eq("device_id", owner).is("order_id", null).order("drawn_at");
@@ -120,6 +121,7 @@ export const myOrders = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const db = await admin();
     const user = await optionalMember(db);
+    if (!user && data.deviceId.startsWith('member:')) throw new Error('請先登入會員');
     const owner = user ? `member:${user}` : data.deviceId;
     const { data: rows } = await db.from("orders").select("*").eq("device_id", owner).order("created_at", { ascending: false });
     return (rows ?? []).map(toOrder);

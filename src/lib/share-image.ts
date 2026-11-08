@@ -11,9 +11,14 @@ export async function renderPng(node: HTMLElement, timeoutMs = 12000): Promise<B
     const clone = node.cloneNode(true) as HTMLElement;
     clone.setAttribute('data-export', 'true');
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
-    const blob = await toBlob(clone, { pixelRatio: 2, skipFonts: true, width: node.offsetWidth, height: node.offsetHeight, backgroundColor: bg, style: { animation: 'none', opacity: '1', transform: 'none' } });
-    if (!blob || !blob.size) throw new Error('empty');
-    return blob;
+    const host = document.createElement('div');
+    host.style.position='fixed'; host.style.left='-10000px'; host.style.top='0'; host.style.width=`${node.offsetWidth}px`;
+    host.append(clone); document.body.append(host);
+    try {
+      const blob = await toBlob(clone, { pixelRatio: 2, skipFonts: true, width: node.offsetWidth, height: node.offsetHeight, backgroundColor: bg, style: { animation: 'none', opacity: '1', transform: 'none' } });
+      if (!blob || !blob.size) throw new Error('empty');
+      return blob;
+    } finally { host.remove(); }
   };
   try {
     return await Promise.race([job(), new Promise<never>((_, reject) => { timer=setTimeout(()=>reject(new Error('timeout')),timeoutMs); })]);
