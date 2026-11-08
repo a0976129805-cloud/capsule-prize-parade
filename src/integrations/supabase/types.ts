@@ -232,6 +232,27 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          id: string
+          name: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          name?: string
+          phone?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reward_settings: {
         Row: {
           data: Json
