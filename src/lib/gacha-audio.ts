@@ -115,7 +115,7 @@ export function createGachaAudio() {
       meow.frequency.exponentialRampToValueAtTime(980, base + meowAt + .16);
       meow.frequency.exponentialRampToValueAtTime(560, base + meowAt + .55);
       const formant = ctx.createBiquadFilter(); formant.type = 'bandpass'; formant.Q.value = 3;
-      formant.frequency.setValueAtTime(1100, base + meowAt); formant.frequency.linearRampToValueAtTime(1800, base + meowAt + .18); formant.frequency.linearRampToValueAtTime(900, base + meowAt + .55);
+      formant.frequency.value = 1400;
       meow.connect(formant); connect(meow, formant, meowAt, .6, .09, .06);
     }
   };
