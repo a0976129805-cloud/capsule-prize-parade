@@ -1,18 +1,18 @@
 export type Rarity = 'SSR' | 'SR' | 'R' | 'N';
-export type CatCard = { no: number; page: number; art: number; name: string; jp: string; rarity: Rarity; motto: string };
+export type CatCard = { no: number; page: number; art: number; cat: string; name: string; jp: string; rarity: Rarity; motto: string };
 
 export const CARD_COUNT = 50;
 export const PAGE_SIZE = 10;
 export const PAGES = [
-  { title: '桜の章', zh: '櫻花篇' },
-  { title: '夏祭りの章', zh: '夏祭篇' },
-  { title: '紅葉の章', zh: '紅葉篇' },
-  { title: '雪見の章', zh: '雪見篇' },
-  { title: '黄金の章', zh: '黃金篇' },
+  { title: '球球の章', zh: '球球' },
+  { title: '仙草の章', zh: '仙草' },
+  { title: '豆花の章', zh: '豆花' },
+  { title: '粉圓の章', zh: '粉圓' },
+  { title: '奶油の章', zh: '奶油' },
 ] as const;
 
 const BASE = [
-  { name: '慵懶雪鞋', jp: 'ごろごろ', motto: '今日はのんびり、ゆっくりで。' },
+   { name: '櫻花野餐', jp: '桜のお花見', motto: '今日はのんびり、ゆっくりで。' },
   { name: '香箱雪鞋', jp: 'こうばこ', motto: 'ふわふわ、しあわせ待ち。' },
   { name: '端坐黑白', jp: 'おすわり', motto: 'じっと見守ってるニャ。' },
   { name: '三貓午睡', jp: 'おひるね', motto: 'みんなでおやすみ。' },
