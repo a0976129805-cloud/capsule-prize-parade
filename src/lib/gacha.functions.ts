@@ -73,7 +73,7 @@ export const drawPrizes = createServerFn({ method: "POST" })
     if (!user) return { ok: false as const, error: "請先登入會員再抽蛋" };
     const cards = rollCards(data.count);
     const { data: rows, error } = await db.rpc("reserve_member_draw", { _user: user, _product: data.machineId, _nos: cards, _device: `member:${user}` });
-    if (error) return { ok: false as const, error: error.message.includes("姓名") ? "請先到會員帳戶填寫姓名與電話" : "抽獎失敗，請再試一次" };
+    if (error) { console.error('Member reservation failed', error.code, error.message); return { ok: false as const, error: error.message.includes("姓名") ? "請先到會員帳戶填寫姓名與電話" : "抽獎失敗，請再試一次" }; }
     if (!rows?.length) return { ok: false as const, error: "庫存不足！" };
     return { ok: true as const, items: (rows as VRow[]).map(toVault), cards };
   });
