@@ -12,7 +12,7 @@ describe('cat cards', () => {
     expect(rollCards(1, () => 0)).toEqual([1]);
   });
   it('SSR is rarer than N', () => {
-    const n = rollCards(20000).map((no) => CARDS[no - 1].rarity);
+    const n = rollCards(20000).map((no) => CARDS[no - 1]!.rarity);
     expect(n.filter((r) => r === 'SSR').length).toBeLessThan(n.filter((r) => r === 'N').length / 5);
   });
   it('album reward defaults to disabled for old settings', () => {

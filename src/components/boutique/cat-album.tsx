@@ -26,13 +26,13 @@ export function CardViewer({ no, onClose, flash }: { no: number; onClose: () => 
       const blob = await toBlob(ref.current, { pixelRatio: 3, cacheBust: true });
       if (!blob) throw new Error('empty');
       const file = new File([blob], `奶油貓卡-${cardLabel(no)}.png`, { type: 'image/png' });
-      if (share && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: '我抽到奶油貓收藏卡！', text: `我在奶油貓ガチャ屋抽到 ${cardLabel(no)} ${CARDS[no - 1].name}！` });
+      if (share && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: '我抽到奶油貓收藏卡！', text: `我在奶油貓ガチャ屋抽到 ${cardLabel(no)} ${CARDS[no - 1]!.name}！` });
       else { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 10000); flash(share ? '此瀏覽器不支援直接分享，已下載卡片' : '卡片已存到下載'); }
     } catch (e) { if (!(e instanceof Error && e.name === 'AbortError')) flash('卡片製作失敗，請再試一次'); } finally { setBusy(false); }
   };
   return <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}><DialogPortal><DialogOverlay className="bg-overlay z-[70]" />
     <DialogPrimitive.Content aria-label="收藏卡大圖" className="fixed left-1/2 top-1/2 z-[70] w-[min(20rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2">
-      <DialogTitle className="sr-only">{cardLabel(no)} {CARDS[no - 1].name}</DialogTitle>
+      <DialogTitle className="sr-only">{cardLabel(no)} {CARDS[no - 1]!.name}</DialogTitle>
       <Button variant="secondary" size="icon" aria-label="關閉卡片" onClick={onClose} className="absolute -right-2 -top-12 h-10 w-10 rounded-full"><X /></Button>
       <CatCardView ref={ref} no={no} big className="card-reveal" />
       <div className="mt-3 grid grid-cols-2 gap-2"><Button variant="secondary" disabled={busy} onClick={() => save(false)}><Download />存到手機</Button><Button disabled={busy} onClick={() => save(true)}><Share2 />{busy ? '製作中…' : '分享給好友'}</Button></div>
@@ -58,7 +58,7 @@ export function CatAlbum({ deviceId, onClose, flash, onLogin }: { deviceId: stri
       <div className="album-book">
         <div className="mb-2 flex items-center justify-between text-primary-foreground">
           <Button variant="ghost" size="icon" aria-label="上一頁" disabled={page === 1} onClick={() => setPage(page - 1)} className="text-primary-foreground"><ChevronLeft /></Button>
-          <div className="text-center"><p className="text-sm font-bold">{PAGES[page - 1].title}</p><p className="text-[10px]">第 {page} 頁・{PAGES[page - 1].zh}・{have}/10</p></div>
+          <div className="text-center"><p className="text-sm font-bold">{PAGES[page - 1]!.title}</p><p className="text-[10px]">第 {page} 頁・{PAGES[page - 1]!.zh}・{have}/10</p></div>
           <Button variant="ghost" size="icon" aria-label="下一頁" disabled={page === PAGES.length} onClick={() => setPage(page + 1)} className="text-primary-foreground"><ChevronRight /></Button>
         </div>
         <div className="album-page grid grid-cols-5 gap-1.5 p-2">

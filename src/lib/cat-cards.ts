@@ -29,8 +29,8 @@ const RARITY_BY_ART: Rarity[] = ['R', 'N', 'SR', 'N', 'R', 'N', 'R', 'SR', 'N', 
 export const RARITY_WEIGHT: Record<Rarity, number> = { N: 12, R: 6, SR: 3, SSR: 1 };
 
 export const CARDS: CatCard[] = Array.from({ length: CARD_COUNT }, (_, i) => {
-  const page = Math.floor(i / PAGE_SIZE) + 1; const art = i % PAGE_SIZE; const b = BASE[art];
-  return { no: i + 1, page, art, name: `${b.name}・${PAGES[page - 1].zh.replace('篇', '')}`, jp: b.jp, rarity: RARITY_BY_ART[art], motto: b.motto };
+  const page = Math.floor(i / PAGE_SIZE) + 1; const art = i % PAGE_SIZE; const b = BASE[art]!;
+  return { no: i + 1, page, art, name: `${b.name}・${PAGES[page - 1]!.zh.replace('篇', '')}`, jp: b.jp, rarity: RARITY_BY_ART[art]!, motto: b.motto };
 });
 
 export const cardLabel = (no: number) => `No.${String(no).padStart(2, '0')}`;
@@ -42,6 +42,6 @@ export function rollCards(count: number, rand: () => number = Math.random): numb
   return Array.from({ length: count }, () => {
     let r = rand() * total;
     for (const c of CARDS) { r -= RARITY_WEIGHT[c.rarity]; if (r < 0) return c.no; }
-    return CARDS[CARDS.length - 1].no;
+    return CARDS[CARDS.length - 1]!.no;
   });
 }
