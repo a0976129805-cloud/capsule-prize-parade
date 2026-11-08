@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, PackageCheck, ShieldCheck, Truck, X, ShoppingBag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Truck, X, ShoppingBag } from 'lucide-react';
 import { trustArt } from './trust-art';
 import { TrustInfoDialog, type TrustTopic } from './trust-info';
 import shrine from '@/assets/omikuji-shrine.jpg';
