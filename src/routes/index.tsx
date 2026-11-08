@@ -256,14 +256,14 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
             {!loading && !loadError && machines.length === 0 && <Empty text="店長正在準備新機台" />}
             <div className="grid grid-cols-2 gap-3">
             {machines.filter((m) => tag === "all" || (tag === "low" && m.totalStock > 0 && m.totalStock <= 5) || (tag === "lastone" && !!m.lastOneName && !m.lastOneAwarded && m.totalStock > 0 && m.totalStock <= 10) || (tag === "plenty" && m.totalStock > 10)).map((m) => (
-              <Button variant="bare" size="bare" key={m.id} onClick={() => setSelectedId(m.id)} className="flex flex-col overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm transition active:scale-[.97]">
+              <Button variant="bare" size="bare" key={m.id} onClick={() => setSelectedId(m.id)} className="flex min-w-0 flex-col items-stretch overflow-hidden whitespace-normal rounded-lg border border-border bg-card text-left shadow-sm transition active:scale-[.97]">
                 <div className="relative aspect-square bg-muted">
                   <img src={m.coverImage} alt={m.title} loading="lazy" className="h-full w-full object-cover" />
                   <span className={`absolute left-1.5 top-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold ${m.totalStock > 0 && m.totalStock <= 3 ? 'bg-destructive text-destructive-foreground motion-safe:animate-pulse' : 'bg-primary text-primary-foreground'}`}>{m.totalStock <= 0 ? "完売御礼" : m.totalStock <= 3 ? "あとわずか・即將完售" : m.totalStock <= 5 ? "残りわずか" : m.status}</span>
                   <span className="absolute bottom-1.5 right-1.5 rounded-full bg-card/90 px-2 py-0.5 text-sm font-bold text-primary">NT${m.price}</span>
                 </div>
                 <div className="p-2">
-                  <p className="line-clamp-2 min-h-[2.5em] break-words text-xs font-bold leading-[1.25]" title={m.title}>{m.title}</p>
+                  <p className="line-clamp-2 min-h-[2.5em] whitespace-normal break-words text-xs font-bold leading-[1.25]" title={m.title}>{m.title}</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">全 {m.items.length} 種・剩餘 {m.totalStock} 顆</p>
                 </div>
               </Button>
