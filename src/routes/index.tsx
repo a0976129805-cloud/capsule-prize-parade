@@ -25,6 +25,10 @@ import { GACHA_TIMING, gachaDropDuration } from '@/lib/gacha-timing';
 import { PrizeGallery } from '@/components/boutique/prize-gallery';
 import { DrawResultDialog } from '@/components/boutique/draw-result-dialog';
 import { MachineOrderList } from '@/components/boutique/machine-order-list';
+import { RewardWallet, useWallet } from '@/components/boutique/reward-wallet';
+import { RewardSettingsForm } from '@/components/boutique/reward-settings';
+import { useMember } from '@/components/boutique/member-session';
+import { bestCoupon, couponDiscount, usableCoupon } from '@/lib/rewards';
 import catLogo from "@/assets/cat-logo.png";
 import {
   Sparkles, Package, ShoppingBag, Settings, RotateCw, ArrowLeft,
@@ -55,12 +59,15 @@ function getDeviceId() {
   return id;
 }
 
-export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vault" | "orders" | "sets" }) {
+export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vault" | "orders" | "sets" | "coupons" }) {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"home" | "vault" | "orders" | "admin" | "sets">(initialTab);
-  const go = (next: 'home' | 'vault' | 'orders' | 'sets' | 'admin') => {
+  const [tab, setTab] = useState<"home" | "vault" | "orders" | "admin" | "sets" | "coupons">(initialTab);
+  const member = useMember();
+  const wallet = useWallet();
+  const [couponChoice,setCouponChoice]=useState('auto');
+  const go = (next: 'home' | 'vault' | 'orders' | 'sets' | 'admin' | 'coupons') => {
     setSelectedId(null); setTab(next);
-    if (next !== 'admin') navigate({ to: next === 'home' ? '/' : next === 'sets' ? '/sets' : next === 'vault' ? '/vault' : '/orders' });
+    if (next !== 'admin') navigate({ to: next === 'home' ? '/' : next === 'sets' ? '/sets' : next === 'vault' ? '/vault' : next === 'coupons' ? '/coupons' : '/orders' });
   };
   const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -130,6 +137,10 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2500); };
   const selected = machines.find((m) => m.id === selectedId) || null;
   const sum = orderTotal(vault.map((v) => v.price));
+  const coupons=member.userId?(wallet.data?.coupons??[]):[];
+  const chosenCoupon=couponChoice==='auto'?bestCoupon(coupons,sum.subtotal):coupons.find(c=>c.id===couponChoice);
+  const discount=couponDiscount(chosenCoupon,sum.subtotal);
+  const checkoutTotal=sum.total-discount;
   const oldest = vault[0]?.drawnAt;
 
   const purchaseSet = async () => {
@@ -186,10 +197,11 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
     if (!agreed) return flash("請先勾選同意出貨規則");
     setSending(true);
     try {
-      await doOrder({ data: { deviceId: getDeviceId(), shipping: { ...ship }, agreed } });
+      await doOrder({ data: { deviceId: getDeviceId(), shipping: { ...ship }, agreed, ...(discount&&chosenCoupon?{couponId:chosenCoupon.id}:{}) } });
+      await wallet.refetch();
     } catch { setSending(false); return flash("送出失敗，請確認資料後再試一次"); }
     setSending(false);
-    setVault([]); setShip(emptyShip); setAgreed(false);
+    setVault([]); setShip(emptyShip); setAgreed(false);setCouponChoice('auto');
     await reloadOrders();
     flash("🎉 出貨申請已送出！");
     go('orders');
@@ -295,6 +307,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
         {tab === "vault" && (
           <div className="space-y-4">
             <h2 className="text-lg font-bold">我的倉庫（{vault.length}）</h2>
+            <Button variant="secondary" className="w-full" onClick={()=>go('coupons')}><Gift/>我的折價券・每日御神籤</Button>
             <div className="rounded-lg border border-border bg-card p-3">
               <ShippingProgress subtotal={sum.subtotal} />
               {oldest && <p className="mt-1 text-xs font-bold text-destructive">⏰ 暫存剩餘 {timeLeft(oldest)}（以最早抽到的商品計算）</p>}
@@ -320,15 +333,18 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
                     <MapPin className="h-5 w-5 shrink-0 text-primary" />
                     {ship.storeCode ? <span><b>{ship.storeName}門市</b>（店號 {ship.storeCode}）<span className="block text-xs text-primary">點此更換門市</span></span> : <span className="font-bold text-primary">點此選擇 7-11 取貨門市</span>}
                   </Button>
+                  {member.userId ? <label className="block text-xs">使用折價券<select className="mt-1 w-full rounded-lg border border-input bg-background p-2 text-sm" value={couponChoice} onChange={e=>setCouponChoice(e.target.value)}><option value="auto">自動選擇最優惠的一張</option><option value="none">不使用折價券</option>{coupons.filter(c=>usableCoupon(c,sum.subtotal)).map(c=><option key={c.id} value={c.id}>{c.name}・滿 {c.minimum} 折 {c.amount}</option>)}</select>{wallet.isError&&<span className="text-destructive">票夾讀取失敗，請重新整理後再使用券。</span>}</label>:<Button type="button" variant="outline" className="w-full" onClick={()=>navigate({to:'/auth'})}>會員登入・使用折價券</Button>}
                   <div className="space-y-1 rounded-xl bg-muted p-3 text-sm">
                     <div className="flex justify-between"><span>扭蛋金額（{vault.length} 顆）</span><span>NT${sum.subtotal}</span></div>
+                    {discount>0&&<div className="flex justify-between gap-3 text-secondary-foreground"><span className="break-words">優惠折抵（{chosenCoupon?.name}）</span><span className="shrink-0">−NT${discount}</span></div>}
                     <div className="flex justify-between"><span>7-11 運費</span><span>{sum.fee ? `NT$${sum.fee}` : "免運"}</span></div>
-                    <div className="flex justify-between border-t border-border pt-1 font-bold"><span>取貨付款總金額</span><span className="text-primary">NT${sum.total}</span></div>
+                    <div className="flex justify-between border-t border-border pt-1 font-bold"><span>取貨付款總金額</span><span className="text-primary">NT${checkoutTotal}</span></div>
                   </div>
+                  <p className="text-[11px] text-muted-foreground">單筆限一張券，運費不折抵；免運按折扣前商品金額計算。</p>
                   <p className="text-xs leading-relaxed text-secondary-foreground">不需先匯款。出貨申請由店長人工整理至 7-11 賣貨便，到店取貨付款；本站非 7-11 官方網站。</p>
                   <p className="text-xs text-muted-foreground">📦 包裹到店後請於 7 日內取貨付款，未取件將影響日後購買資格。</p>
                   <label className="flex items-start gap-2 text-xs"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" /> 我已閱讀並同意：{RULES}</label>
-                  <Button variant="bare" size="bare" disabled={sending} className="w-full rounded-full bg-primary py-3 font-bold text-primary-foreground disabled:opacity-50">{sending ? "送出中…" : `📦 一鍵整單出貨（共 ${vault.length} 顆・NT$${sum.total}）`}</Button>
+                  <Button variant="bare" size="bare" disabled={sending} className="w-full rounded-full bg-primary py-3 font-bold text-primary-foreground disabled:opacity-50">{sending ? "送出中…" : `📦 一鍵整單出貨（共 ${vault.length} 顆・NT$${checkoutTotal}）`}</Button>
                 </form>
               </>
             )}
@@ -343,6 +359,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
           </div>
         )}
 
+        {tab === "coupons" && <RewardWallet />}
         {tab === "admin" && <AdminGate><Admin machines={machines} reload={reloadMachines} flash={flash} /></AdminGate>}
       </main>
 
@@ -384,6 +401,7 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
     <div className="rounded-lg border border-border bg-card p-4 text-sm">
       <div className="flex justify-between"><span className="font-bold">{o.id}</span><span className={`st-${o.status} rounded-full px-2.5 py-0.5 text-xs font-bold`}>{o.status}</span></div>
       <p className="text-xs text-muted-foreground">{o.createdAt}・總金額 NT${o.total}</p>
+      {!!o.discount&&<p className="mt-1 text-xs text-secondary-foreground">{o.couponName}・已折抵 NT${o.discount}</p>}
       <ul className="mt-2 divide-y divide-border rounded-xl bg-muted/60 px-3">
         {groupItems(o.items).map((g) => <li key={g.name} className="flex justify-between gap-2 py-1.5"><span>{g.name}</span><span className="shrink-0 font-bold">- {g.qty} 顆</span></li>)}
       </ul>
@@ -394,7 +412,7 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
 }
 
 function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () => Promise<void>; flash: (m: string) => void }) {
-  const [view, setView] = useState<"machines" | "orders" | "seller" | "shop">("machines");
+  const [view, setView] = useState<"machines" | "orders" | "seller" | "shop" | "rewards">("machines");
   const [edit, setEdit] = useState<Machine | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [ostat, setOstat] = useState("待出貨");
@@ -463,14 +481,14 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-4 rounded-full bg-muted p-1 text-xs font-bold">
-        {(["machines", "orders", "seller", "shop"] as const).map((v) => (
+      <div className="grid grid-cols-5 rounded-full bg-muted p-1 text-xs font-bold">
+        {(["machines", "orders", "seller", "shop", "rewards"] as const).map((v) => (
           <Button variant="bare" size="bare" key={v} onClick={() => setView(v)} className={`rounded-full py-2 ${view === v ? "bg-card text-primary shadow" : "text-muted-foreground"}`}>
-            {v === "machines" ? "扭蛋機" : v === "orders" ? `訂單` : v === "seller" ? "賣家設定" : "商店公告"}
+            {v === "machines" ? "扭蛋機" : v === "orders" ? `訂單` : v === "seller" ? "賣家設定" : v==='rewards'?'會員優惠':"商店公告"}
           </Button>
         ))}
       </div>
-      {view === "shop" ? <ShopInfoForm flash={flash} /> : view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
+      {view === 'rewards' ? <RewardSettingsForm flash={flash}/> : view === "shop" ? <ShopInfoForm flash={flash} /> : view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
         <>
           <Button variant="bare" size="bare" onClick={() => setEdit({ id: "m" + Date.now(), title: "", price: 100, totalStock: 0, setPrice: 0, coverImage: "", status: "熱烈販售中", items: [] })}
             className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Plus className="h-4 w-4" /> 新增扭蛋機</Button>
@@ -692,7 +710,8 @@ function ShopInfoForm({ flash }: { flash: (m: string) => void }) {
   );
 }
 
-function SideMenu({ info, onClose, go }: { info: ShopInfo; onClose: () => void; go: (t: "home" | "vault" | "orders" | "admin" | "sets") => void }) {
+function SideMenu({ info, onClose, go }: { info: ShopInfo; onClose: () => void; go: (t: "home" | "vault" | "orders" | "admin" | "sets" | "coupons") => void }) {
+  const member=useMember();const navigate=useNavigate();
   const [open, setOpen] = useState<string | null>("guide");
   const Sec = ({ id, icon: Icon, title, children }: { id: string; icon: typeof BookOpen; title: string; children: React.ReactNode }) => (
     <div className="rounded-2xl border border-border bg-card">
@@ -712,6 +731,8 @@ function SideMenu({ info, onClose, go }: { info: ShopInfo; onClose: () => void; 
         </div>
         <div className="border-y border-border py-3 text-xs leading-relaxed text-muted-foreground"><p className="font-bold text-foreground">日本街角的驚喜，送到台灣的你手中。</p><p className="mt-2">店長住在日本，為你挑選當地正版扭蛋。這裡是奶油貓的線上店舖，不是 7-11 官方網站；訂單由店長整理後透過賣貨便寄送。</p></div>
         <Button variant="secondary" className="rounded-full" onClick={() => go("sets")}><ShoppingBag />整套收藏賣場</Button>
+        <Button variant="secondary" onClick={()=>go('coupons')}><Gift/>我的折價券・每日御神籤</Button>
+        <Button variant="outline" onClick={()=>navigate({to:'/auth'})}>{member.userId?'會員帳戶・登出':'會員登入'}</Button>
         <Sec id="guide" icon={BookOpen} title="新手玩法 3 步驟">
           <p>① 挑選喜歡的扭蛋機，單抽或五連抽。</p>
           <p>② 抽到的扭蛋自動放進「我的倉庫」，免費暫存 {VAULT_HOURS} 小時。</p>

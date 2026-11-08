@@ -1,0 +1,3 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { MemberLogin } from '@/components/boutique/member-login';
+export const Route=createFileRoute('/auth')({head:()=>({meta:[{title:'會員登入｜奶油貓 扭蛋屋'},{name:'description',content:'登入奶油貓會員，查看折價券與每日簽到。'},{property:'og:title',content:'奶油貓會員登入'},{property:'og:description',content:'會員禮遇與折價券票夾。'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary'}]}),component:MemberLogin});

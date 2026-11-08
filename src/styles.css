@@ -294,3 +294,7 @@ button, input, textarea, select { font-family: inherit; }
     color: var(--color-foreground);
   }
 }
+
+.google-member-button { background: var(--google-auth-background); border-color: var(--google-auth-border); color: var(--google-auth-text); font-weight: 500; }
+:root { --google-auth-background: #ffffff; --google-auth-border: #747775; --google-auth-text: #1f1f1f; }
+.dark { --google-auth-background: #131314; --google-auth-border: #8e918f; --google-auth-text: #e3e3e3; }

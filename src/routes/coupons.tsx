@@ -1,0 +1,3 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { Storefront } from './index';
+export const Route=createFileRoute('/coupons')({head:()=>({meta:[{title:'我的折價券｜奶油貓會員'},{name:'description',content:'奶油貓會員票夾、新人禮、每日貓咪御神籤與連續簽到。'},{property:'og:title',content:'奶油貓會員折價券'},{property:'og:description',content:'每日御神籤與肉球印章，收藏滿額折價券。'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary'}]}),component:()=> <Storefront initialTab="coupons"/>});

@@ -38,10 +38,70 @@ export type Database = {
         }
         Relationships: []
       }
+      member_coupons: {
+        Row: {
+          amount: number
+          created_at: string
+          expires_at: string
+          id: string
+          minimum: number
+          name: string
+          source: string
+          used_order_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          expires_at: string
+          id?: string
+          minimum: number
+          name: string
+          source: string
+          used_order_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          minimum?: number
+          name?: string
+          source?: string
+          used_order_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      member_rewards: {
+        Row: {
+          last_day: string | null
+          newcomer_claimed: boolean
+          streak: number
+          user_id: string
+        }
+        Insert: {
+          last_day?: string | null
+          newcomer_claimed?: boolean
+          streak?: number
+          user_id: string
+        }
+        Update: {
+          last_day?: string | null
+          newcomer_claimed?: boolean
+          streak?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
+          coupon_id: string | null
+          coupon_name: string
           created_at: string
           device_id: string
+          discount: number
           id: string
           item_count: number
           items: Json
@@ -55,8 +115,11 @@ export type Database = {
           total: number
         }
         Insert: {
+          coupon_id?: string | null
+          coupon_name?: string
           created_at?: string
           device_id: string
+          discount?: number
           id: string
           item_count?: number
           items?: Json
@@ -70,8 +133,11 @@ export type Database = {
           total?: number
         }
         Update: {
+          coupon_id?: string | null
+          coupon_name?: string
           created_at?: string
           device_id?: string
+          discount?: number
           id?: string
           item_count?: number
           items?: Json
@@ -163,6 +229,21 @@ export type Database = {
           status?: string
           title?: string
           total_stock?: number
+        }
+        Relationships: []
+      }
+      reward_settings: {
+        Row: {
+          data: Json
+          id: number
+        }
+        Insert: {
+          data?: Json
+          id?: number
+        }
+        Update: {
+          data?: Json
+          id?: number
         }
         Relationships: []
       }
@@ -271,6 +352,19 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      checkout_vault: {
+        Args: {
+          _coupon?: string
+          _device: string
+          _shipping: Json
+          _user?: string
+        }
+        Returns: Json
+      }
+      claim_member_reward: {
+        Args: { _kind: string; _user: string }
+        Returns: Json
       }
       draw_prizes: {
         Args: { _device: string; _n: number; _product: string }
