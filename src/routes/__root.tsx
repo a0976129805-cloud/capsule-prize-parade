@@ -11,6 +11,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { MemberContext } from '@/components/boutique/member-session';
+import { sessionEventAction } from '@/lib/member-restoration';
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -118,14 +119,22 @@ function RootComponent() {
   const router = useRouter();
   const [member,setMember]=useState<{userId:string|null;ready:boolean}>({userId:null,ready:false});
   useEffect(()=>{
-    supabase.auth.getUser().then(({data})=>setMember({userId:data.user?.id??null,ready:true}));
+    let active=true; let revision=0;
     const {data:{subscription}}=supabase.auth.onAuthStateChange((event,session)=>{
-      if(!['SIGNED_IN','SIGNED_OUT','USER_UPDATED'].includes(event))return;
-      queryClient.removeQueries({queryKey:['album','member']});
-      setMember({userId:session?.user.id??null,ready:true});
+      const action=sessionEventAction(event);
+      if(!action.restore)return;
+      revision++;
+      if(active)setMember({userId:session?.user.id??null,ready:true});
+      if(!action.invalidate)return;
+      if(event==='SIGNED_OUT')queryClient.clear();
       router.invalidate();
       if(event!=='SIGNED_OUT')queryClient.invalidateQueries();
-    });return ()=>subscription.unsubscribe();
+    });
+    const initialRevision=revision;
+    void supabase.auth.getUser().then(({data,error})=>{
+      if(active&&revision===initialRevision&&!error)setMember({userId:data.user?.id??null,ready:true});
+    }).catch(()=>{});
+    return ()=>{active=false;subscription.unsubscribe();};
   },[queryClient,router]);
 
   return (
