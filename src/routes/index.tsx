@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAdmin, unlockAdmin, lockAdmin } from "@/lib/admin-gate.functions";
@@ -17,10 +17,13 @@ import { Button } from "@/components/ui/button";
 import { BannerCarousel, ShippingProgress, TrustStrip, SetPopup } from "@/components/boutique/storefront";
 import { GachaScene, DockIcon } from "@/components/boutique/gacha-scene";
 import { buildMyshipRows } from "@/lib/exportMyship";
+import { DrawFeed } from '@/components/boutique/draw-feed';
+import { ShareCard } from '@/components/boutique/share-card';
+import { repeatDrawCount } from '@/lib/draw-results';
 import catLogo from "@/assets/cat-logo.png";
 import {
   Sparkles, Package, ShoppingBag, Settings, RotateCw, ArrowLeft,
-  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle, Menu, Upload, MessageCircle, Instagram, BookOpen, ShieldCheck, Lock,
+  Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle, Menu, Upload, MessageCircle, Instagram, BookOpen, ShieldCheck, Lock, Share2, Gift,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -48,7 +51,12 @@ function getDeviceId() {
 }
 
 export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vault" | "orders" | "sets" }) {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<"home" | "vault" | "orders" | "admin" | "sets">(initialTab);
+  const go = (next: 'home' | 'vault' | 'orders' | 'sets' | 'admin') => {
+    setSelectedId(null); setTab(next);
+    if (next !== 'admin') navigate({ to: next === 'home' ? '/' : next === 'sets' ? '/sets' : next === 'vault' ? '/vault' : '/orders' });
+  };
   const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [vault, setVault] = useState<VaultItem[]>([]);
@@ -62,6 +70,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   const [skipped, setSkipped] = useState(false);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<VaultItem[] | null>(null);
+  const [shareItems, setShareItems] = useState<VaultItem[] | null>(null);
   const [phase, setPhase] = useState<null | "spin" | "drop" | "open">(null);
   const [ship, setShip] = useState<Shipping>(emptyShip);
   const [agreed, setAgreed] = useState(false);
@@ -93,10 +102,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   }, []);
 
   useEffect(() => {
-    const sync = () => { const path = window.location.pathname; setTab(path === "/sets" ? "sets" : path === "/vault" ? "vault" : path === "/orders" ? "orders" : "home"); setSelectedId(null); };
-    window.addEventListener("popstate", sync);
-    return () => window.removeEventListener("popstate", sync);
-  }, []);
+    setTab(initialTab); setSelectedId(null);
+  }, [initialTab]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2500); };
   const selected = machines.find((m) => m.id === selectedId) || null;
@@ -110,7 +117,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       const r = await doSet({ data: { machineId: setMachine.id, deviceId: getDeviceId() } });
       if (!r.ok) { flash(r.error); return; }
       await reloadVault(); await reloadMachines();
-      setSetMachine(null); setTab("vault"); setSelectedId(null);
+      setSetMachine(null); go('vault');
+      if (r.items.some((i) => i.isLastOne)) { setResult(r.items); return; }
       flash("全套已保留，請填寫收件資料完成整倉出貨");
     } catch { flash("購買失敗，請再試一次"); }
     finally { setBuying(false); }
@@ -153,14 +161,14 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
     setVault([]); setShip(emptyShip); setAgreed(false);
     await reloadOrders();
     flash("🎉 出貨申請已送出！");
-    setTab("orders"); window.history.pushState({}, "", "/orders");
+    go('orders');
   };
 
   return (
     <div className="min-h-screen pb-24 text-foreground">
       <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-md">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2">
-          <Button variant="bare" size="bare" onClick={() => { setTab("home"); setSelectedId(null); }} className="flex items-center gap-2 font-bold">
+          <Button variant="bare" size="bare" onClick={() => go('home')} className="flex items-center gap-2 font-bold">
             <img src={catLogo} alt="クリームキャット" width={40} height={40} className="h-10 w-10 rounded-full bg-card object-contain p-0.5" />
             <span className="text-left"><span className="block text-sm font-bold">奶油貓 扭蛋屋</span><span className="block text-[10px] font-medium">クリームキャット ガチャ屋</span></span>
           </Button>
@@ -172,9 +180,10 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       <main className="mx-auto max-w-2xl px-4 py-4">
         {tab === "home" && !selected && (
           <div className="space-y-4">
-            <BannerCarousel images={info.banners || []} onSets={() => { setTab("sets"); window.history.pushState({}, "", "/sets"); }} onGuide={() => setMenu(true)} />
+            <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
             <TrustStrip />
-            <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><Button variant="secondary" size="sm" className="rounded-full" onClick={() => { setTab("sets"); window.history.pushState({}, "", "/sets"); }}><ShoppingBag />整套賣場</Button></div>
+            <DrawFeed />
+            <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><Button variant="secondary" size="sm" className="rounded-full" onClick={() => go('sets')}><ShoppingBag />整套賣場</Button></div>
             {loading && <p className="py-8 text-center text-sm text-muted-foreground">正在載入扭蛋機台…</p>}
             {loadError && <Button variant="outline" className="w-full" onClick={reloadMachines}>讀取失敗・重新載入</Button>}
             {!loading && !loadError && machines.length === 0 && <Empty text="店長正在準備新機台" />}
@@ -233,6 +242,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
               )}
             </div>
             {selected.setPrice > 0 && <Button variant="secondary" className="h-12 w-full rounded-full" onClick={() => setSetMachine(selected)}><ShoppingBag />全套直購・NT${selected.setPrice}</Button>}
+            {selected.lastOneName && <section className="flex items-center gap-3 border-y border-border py-4" aria-label="機台最後賞"><Gift className="h-6 w-6 shrink-0 text-primary" />{selected.lastOneImage && <img src={selected.lastOneImage} alt={selected.lastOneName} className="h-16 w-16 rounded-lg object-contain" />}<div className="min-w-0"><p className="text-xs font-bold text-primary">ラストワン賞・最後賞</p><p className="break-words text-sm font-bold">{selected.lastOneName}</p><p className="mt-1 text-xs text-muted-foreground">{selected.lastOneAwarded ? '本機台最後賞已發放' : '抽走最後一顆（含整套直購），額外獲得此贈品。每機台限一次，須於 24 小時內整倉出貨。'}</p></div></section>}
             <div>
               <p className="mb-2 font-bold">全款式一覽</p>
               <div className="grid grid-cols-3 gap-2">
@@ -263,7 +273,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
                   {vault.map((v) => (
                     <div key={v.vaultId} className="overflow-hidden rounded-lg border-2 border-border bg-card">
                       <img src={v.image} alt={v.name} className="aspect-square w-full object-cover" />
-                      <div className="p-1.5"><p className="text-xs font-bold leading-tight">{v.name}</p><p className="text-[10px] text-muted-foreground">NT${v.price}</p></div>
+                      <div className="p-1.5"><p className="text-xs font-bold leading-tight">{v.name}</p><p className="text-[10px] text-muted-foreground">{v.isLastOne ? '🎊 最後賞贈品' : `NT$${v.price}`}</p></div>
                     </div>
                   ))}
                 </div>
@@ -305,9 +315,9 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
 
       <footer className="mx-auto mb-4 max-w-2xl border-t border-border px-4 pt-5 text-center text-xs leading-relaxed text-muted-foreground"><p className="font-bold text-foreground">奶油貓・日本線上扭蛋屋</p><p className="mt-1">日本正版扭蛋・7-11 賣貨便到店付款</p><p>不要求 ATM 操作或提前匯款；遇到疑問請先聯繫店長。</p>{info.lineUrl && <a className="mt-2 inline-flex items-center gap-1 text-secondary-foreground" href={info.lineUrl} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" />LINE 客服</a>}{info.serviceHours && <p>{info.serviceHours}</p>}</footer>
       <nav aria-label="底部導覽" className="boutique-dock fixed inset-x-3 bottom-3 z-30 mx-auto max-w-md rounded-2xl border border-border">
-        <div className="grid grid-cols-3">
-          {([["home", "扭蛋機台"], ["vault", "我的倉庫"], ["orders", "訂單進度"]] as const).map(([k, l]) => (
-            <Button variant="bare" size="bare" key={k} onClick={() => { setTab(k); setSelectedId(null); window.history.pushState({}, "", k === "home" ? "/" : `/${k}`); }} aria-current={tab === k ? "page" : undefined}
+        <div className="grid grid-cols-4">
+          {([["home", "扭蛋機台"], ["sets", "整套專區"], ["vault", "我的倉庫"], ["orders", "訂單進度"]] as const).map(([k, l]) => (
+            <Button variant="bare" size="bare" key={k} onClick={() => go(k)} aria-current={tab === k ? "page" : undefined}
               className={`dock-item relative h-16 flex-col gap-1 rounded-xl text-[11px] ${tab === k ? "text-primary dock-active" : "text-muted-foreground"}`}>
               <DockIcon kind={k} />{l}
               {k === "vault" && vault.length > 0 && <span className="absolute right-[27%] top-1 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{vault.length}</span>}
@@ -316,31 +326,34 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
         </div>
       </nav>
 
-      {menu && <SideMenu info={info} onClose={() => setMenu(false)} go={(t) => { setTab(t); setSelectedId(null); setMenu(false); }} />}
+      {menu && <SideMenu info={info} onClose={() => setMenu(false)} go={(t) => { go(t); setMenu(false); }} />}
 
       {setMachine && <SetPopup machine={setMachine} busy={buying} onBuy={purchaseSet} onClose={() => setSetMachine(null)} />}
       {phase && <GachaScene phase={phase} skipped={skipped} onSkip={() => skipRef.current?.()} />}
 
       {result && (
         <div className="bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="animate-pop w-full max-w-sm rounded-2xl bg-card p-5 text-center">
-            <p className="text-xl font-bold text-primary">🎉 おめでとう！</p>
+          <div role="dialog" aria-modal="true" aria-label="扭蛋開獎結果" className="animate-pop max-h-[88dvh] w-full max-w-sm overflow-y-auto rounded-2xl bg-card p-5 text-center">
+            <p className="text-xl font-bold text-primary">{result.some((i) => i.isLastOne) ? '🎊 ラストワン賞！' : '🎉 おめでとう！'}</p>
+            {result.some((i) => i.isLastOne) && <p className="my-2 rounded-lg bg-accent p-3 text-sm font-bold text-accent-foreground">恭喜抽走最後一顆！最後賞已一併存入倉庫。</p>}
             <p className="mb-4 text-sm text-muted-foreground">商品已成功存入您的個人倉庫！</p>
             <div className="grid grid-cols-3 gap-2">
               {result.map((r, i) => (
                 <div key={r.vaultId} className="animate-pop" style={{ animationDelay: `${i * 0.1}s` }}>
                   <img src={r.image} alt={r.name} className="aspect-square w-full rounded-xl object-cover" />
-                  <p className="mt-1 text-xs">{r.name}</p>
+                  <p className="mt-1 text-xs">{r.isLastOne && '🎊 最後賞・'}{r.name}</p>
                 </div>
               ))}
             </div>
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <Button variant="bare" size="bare" onClick={() => { const n = result.length === 5 ? 5 : 1; setResult(null); draw(n); }} disabled={spinning || !selected || selected.totalStock < (result.length === 5 ? 5 : 1)} className="rounded-full border-2 border-primary py-2.5 font-bold text-primary">再抽一次</Button>
-              <Button variant="bare" size="bare" onClick={() => { setResult(null); setTab("vault"); }} className="rounded-full bg-primary py-2.5 font-bold text-primary-foreground">查看倉庫</Button>
+              <Button variant="bare" size="bare" onClick={() => { const n = repeatDrawCount(result); setResult(null); draw(n); }} disabled={spinning || !selected || selected.totalStock < repeatDrawCount(result)} className="rounded-full border-2 border-primary py-2.5 font-bold text-primary">再抽一次</Button>
+              <Button variant="bare" size="bare" onClick={() => { setResult(null); go('vault'); }} className="rounded-full bg-primary py-2.5 font-bold text-primary-foreground">查看倉庫</Button>
             </div>
+            <Button variant="ghost" className="mt-3 w-full" onClick={() => setShareItems(result)}><Share2 />製作我的收藏分享卡</Button>
           </div>
         </div>
       )}
+      {shareItems && <ShareCard items={shareItems} onClose={() => setShareItems(null)} flash={flash} />}
 
       {picker && <StorePicker onClose={() => setPicker(false)} onPick={(st) => { setShip((p) => ({ ...p, storeName: st.name, storeCode: st.code })); setPicker(false); }} />}
 
@@ -410,6 +423,7 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
         <div className="text-xs">總庫存（自動加總）<p className="rounded-xl bg-muted px-3 py-2 text-sm font-bold">{edit.items.reduce((a, i) => a + (Number(i.stock) || 0), 0)} 顆</p></div>
       </div>
       <label className="block text-xs">整套售價（0 表示不販售整套）<input className={field} type="number" min={0} value={edit.setPrice} onChange={(e) => setEdit({ ...edit, setPrice: Math.max(0, +e.target.value) })} /></label>
+      <section className="space-y-2 border-y border-border py-3"><p className="flex items-center gap-1 text-sm font-bold"><Gift className="h-4 w-4 text-primary" />最後賞設定</p><label className="block text-xs">最後賞名稱（留白不啟用）<input className={field} value={edit.lastOneName ?? ''} onChange={(e) => setEdit({ ...edit, lastOneName: e.target.value })} /></label><div className="flex items-center gap-3">{edit.lastOneImage && <img src={edit.lastOneImage} alt="最後賞" className="h-16 w-16 rounded-lg object-contain" />}<ImageUpload label="上傳最後賞照片" flash={flash} onDone={(url) => setEdit((e) => e && { ...e, lastOneImage: url })} /></div><p className="text-xs text-muted-foreground">{edit.lastOneAwarded ? '此機台已發放最後賞；補庫存或儲存不會重複發放。新活動請建立新機台。' : '消耗最後庫存時贈送一份（含整套直購）。最後賞不計價、不計入可抽庫存，逾期失去資格，不再次發放。'}</p></section>
       <input className={field} placeholder="狀態標籤" value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })} />
       <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-2">
         {edit.coverImage ? <img src={edit.coverImage} alt="" className="h-16 w-16 rounded-lg object-cover" /> : <div className="h-16 w-16 rounded-lg bg-muted" />}
