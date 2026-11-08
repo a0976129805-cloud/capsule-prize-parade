@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { trustArt } from './trust-art';
 import { FREE_SHIP_AMOUNT, SHIP_FEE } from '@/lib/shipping';
 
 export type TrustTopic = 'cod' | 'genuine' | 'shipping';
@@ -39,8 +40,8 @@ const topics: Record<TrustTopic, { tag: string; title: string; points: string[] 
 export function TrustInfoDialog({ topic, onClose }: { topic: TrustTopic | null; onClose: () => void }) {
   const t = topic ? topics[topic] : null;
   return <Dialog open={!!t} onOpenChange={(o) => { if (!o) onClose(); }}>
-    <DialogContent className="max-w-sm rounded-2xl">
-      {t && <><DialogHeader className="text-left">
+    <DialogContent className="max-w-sm overflow-hidden rounded-2xl">
+      {t && topic && <><img src={trustArt[topic]} alt={t.title} width={1024} height={768} className="-mx-6 -mt-6 aspect-[4/3] w-[calc(100%+3rem)] max-w-none object-cover" /><DialogHeader className="text-left">
         <p className="text-xs font-bold text-secondary-foreground">{t.tag}</p>
         <DialogTitle className="text-xl">{t.title}</DialogTitle>
         <DialogDescription className="sr-only">{t.title}說明</DialogDescription>

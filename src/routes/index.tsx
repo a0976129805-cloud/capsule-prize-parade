@@ -234,7 +234,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
         {tab === "home" && !selected && (
           <div className="space-y-4">
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
-            <TrustStrip onDaily={() => go('coupons')} />
+            <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
             <DrawFeed machines={machines} />
             <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><Button variant="secondary" size="sm" className="rounded-full" onClick={() => go('sets')}><ShoppingBag />整套賣場</Button></div>
             {loading && <p className="py-8 text-center text-sm text-muted-foreground">正在載入扭蛋機台…</p>}
