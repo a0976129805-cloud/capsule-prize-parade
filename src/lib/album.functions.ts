@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { ALBUM_DEFAULT, rewardSettingsSchema } from './rewards';
+import { validateAlbumMerge } from './album-merge';
 
 const dev = (d: unknown) => String(d ?? '').slice(0, 80);
 
@@ -30,10 +31,7 @@ export const memberAlbum = createServerFn({ method: 'POST' })
 
 export const mergeAlbum = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { deviceId: string; confirmed: boolean }) => {
-    if (d.confirmed !== true || !d.deviceId || d.deviceId.length > 80) throw new Error('請先確認合併卡片');
-    return { deviceId: d.deviceId };
-  })
+  .inputValidator(validateAlbumMerge)
   .handler(async ({ context, data }) => {
     const { supabaseAdmin: db } = await import('@/integrations/supabase/client.server');
     const { error } = await db.rpc('merge_cat_album', { _user: context.userId, _device: data.deviceId });
