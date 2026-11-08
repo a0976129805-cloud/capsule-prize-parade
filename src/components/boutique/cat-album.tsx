@@ -10,6 +10,7 @@ import { CARD_COUNT, PAGES, cardLabel, pageCards, CARDS } from '@/lib/cat-cards'
 import { myAlbum, memberAlbum, mergeAlbum, claimAlbumPage } from '@/lib/album.functions';
 import { useMember } from './member-session';
 import { CatCardView } from './cat-card';
+import { pendingCardCounts } from '@/lib/pending-cards';
 
 export const albumQueryKey = (device: string, user?: string | null) => user ? ['album', 'member', user, device] : ['album', 'guest', device];
 
@@ -49,8 +50,7 @@ export function CatAlbum({ deviceId, onClose, flash, onLogin }: { deviceId: stri
   const [confirmMerge, setConfirmMerge] = useState(false);
   const [page, setPage] = useState(1); const [view, setView] = useState<number | null>(null); const [busy, setBusy] = useState(false);
   const owned = new Map((album.data?.cards ?? []).map((c) => [c.no, c.copies]));
-  const pending = new Map<number, number>();
-  for (const no of album.data?.pending ?? []) pending.set(no, (pending.get(no) ?? 0)+1);
+  const pending = pendingCardCounts(album.data?.pending ?? []);
   const cards = pageCards(page); const have = cards.filter((c) => owned.has(c.no)).length;
   const claimed = album.data?.claimed.includes(page); const reward = album.data?.reward;
   const mergeCards = async () => {
