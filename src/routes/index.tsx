@@ -24,6 +24,8 @@ import { createGachaAudio, type GachaCue } from '@/lib/gacha-audio';
 import { GACHA_TIMING, gachaDropDuration } from '@/lib/gacha-timing';
 import { PrizeGallery } from '@/components/boutique/prize-gallery';
 import { DrawResultDialog } from '@/components/boutique/draw-result-dialog';
+import { MemberDrawPrompt, OfficialStoreLookup, StorefrontFaq } from '@/components/boutique/first-visit';
+import { canSubmitCheckout, PICKUP_DAYS } from '@/lib/checkout-consent';
 import { MachineOrderList } from '@/components/boutique/machine-order-list';
 import { RewardWallet, useWallet } from '@/components/boutique/reward-wallet';
 import { RewardSettingsForm } from '@/components/boutique/reward-settings';
@@ -123,6 +125,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
     return () => { active = false; };
   }, [member.ready, member.userId, readMemberContact]);
   const [agreed, setAgreed] = useState(false);
+  const [pickupAgreed, setPickupAgreed] = useState(false);
+  const [loginPrompt, setLoginPrompt] = useState(false);
   const [picker, setPicker] = useState(false);
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -172,7 +176,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   const purchaseSet = async () => {
     if (!setMachine || buying) return;
     if (!member.ready) return flash("確認登入狀態中…");
-    if (!member.userId) { navigate({to:"/auth"}); return; }
+    if (!member.userId) { setLoginPrompt(true); return; }
     setBuying(true);
     try {
       const r = await doSet({ data: { machineId: setMachine.id, deviceId: getDeviceId() } });
@@ -190,7 +194,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
 
   const draw = async (count: number) => {
     if (!member.ready) return flash("確認登入狀態中…");
-    if (!member.userId) { navigate({to:"/auth"}); return; }
+    if (!member.userId) { setLoginPrompt(true); return; }
     if (!selected || selected.totalStock < count) return flash("庫存不足！");
     if (spinning) return;
     setSpinning(true); setSkipped(false); setAnimationCount(count);
@@ -227,7 +231,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
     if (!vault.length) return flash("倉庫沒有商品");
     if (!/^09\d{8}$/.test(ship.phone)) return flash("請輸入 09 開頭的 10 碼手機號碼");
     if (!/^\d{6}$/.test(ship.storeCode)) return flash("請點選 7-11 取貨門市");
-    if (!agreed) return flash("請先勾選同意出貨規則");
+    if (!canSubmitCheckout(agreed, pickupAgreed)) return flash("請勾選出貨規則與 7 日內取貨承諾");
     setSending(true);
     try {
       await doOrder({ data: { deviceId: getDeviceId(), shipping: { ...ship }, agreed, ...(discount&&chosenCoupon?{couponId:chosenCoupon.id}:{}) } });
@@ -235,7 +239,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
     } catch { setSending(false); return flash("送出失敗，請確認資料後再試一次"); }
     setSending(false);
     refreshAlbum();
-    setVault([]); setShip(emptyShip); setAgreed(false);setCouponChoice('auto');
+    setVault([]); setShip(emptyShip); setAgreed(false); setPickupAgreed(false);setCouponChoice('auto');
     await reloadOrders();
     flash("🎉 出貨申請已送出！");
     go('orders');
@@ -280,6 +284,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
               </Button>
             ))}
             </div>
+            <StorefrontFaq lineUrl={info.lineUrl} contactEmail={info.contactEmail} />
           </div>
         )}
 
@@ -377,9 +382,9 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
                   </div>
                   <p className="text-[11px] text-muted-foreground">單筆限一張券，運費不折抵；免運按折扣前商品金額計算。</p>
                   <p className="text-xs leading-relaxed text-secondary-foreground">不需先匯款。出貨申請由店長人工整理至 7-11 賣貨便，到店取貨付款；本站非 7-11 官方網站。</p>
-                  <p className="text-xs text-muted-foreground">📦 包裹到店後請於 7 日內取貨付款，未取件將影響日後購買資格。</p>
                   <label className="flex items-start gap-2 text-xs"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" /> 我已閱讀並同意：{RULES}</label>
-                  <Button variant="bare" size="bare" disabled={sending} className="w-full rounded-full bg-primary py-3 font-bold text-primary-foreground disabled:opacity-50">{sending ? "送出中…" : `📦 一鍵整單出貨（共 ${vault.length} 顆・NT$${checkoutTotal}）`}</Button>
+                  <label className="flex items-start gap-2 text-xs leading-relaxed"><input type="checkbox" required checked={pickupAgreed} onChange={(e) => setPickupAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]" /><span>我承諾於包裹到店後 {PICKUP_DAYS} 日內取貨付款，了解未取件將影響日後購買資格。</span></label>
+                  <Button variant="bare" size="bare" disabled={sending || !canSubmitCheckout(agreed, pickupAgreed)} className="w-full rounded-full bg-primary py-3 font-bold text-primary-foreground disabled:opacity-50">{sending ? "送出中…" : `📦 一鍵整單出貨（共 ${vault.length} 顆・NT$${checkoutTotal}）`}</Button>
                 </form>
               </>
             )}
@@ -418,7 +423,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       {phase && <GachaScene phase={phase} count={animationCount} sound={sound} onSound={toggleSound} skipped={skipped} onSkip={() => skipRef.current?.()} />}
 
       {albumOpen && deviceId && <CatAlbum deviceId={deviceId} onClose={() => setAlbumOpen(false)} flash={flash} onLogin={() => { setAlbumOpen(false); go("coupons"); }} />}
-      {result && <DrawResultDialog cards={newCards} onAlbum={() => { setResult(null); setAlbumOpen(true); }} items={result} canRepeat={!spinning && !!selected && selected.totalStock >= repeatDrawCount(result)} onClose={() => { setResult(null); audioRef.current?.stop(); }} onRepeat={() => { const n = repeatDrawCount(result); audioRef.current?.stop(); setResult(null); draw(n); }} onVault={() => { audioRef.current?.stop(); setResult(null); go('vault'); }} onShare={() => setShareItems(result)} />}
+      <MemberDrawPrompt open={loginPrompt} onClose={() => setLoginPrompt(false)} onLogin={() => { setLoginPrompt(false); setSetMachine(null); navigate({ to: '/auth' }); }} />
+      {result && <DrawResultDialog cards={newCards} repeatCount={repeatDrawCount(result)} repeatPrice={selected ? selected.price * repeatDrawCount(result) : undefined} onAlbum={() => { setResult(null); setAlbumOpen(true); }} items={result} canRepeat={!spinning && !!selected && selected.totalStock >= repeatDrawCount(result)} onClose={() => { setResult(null); audioRef.current?.stop(); }} onRepeat={() => { const n = repeatDrawCount(result); audioRef.current?.stop(); setResult(null); draw(n); }} onVault={() => { audioRef.current?.stop(); setResult(null); go('vault'); }} onShare={() => setShareItems(result)} />}
       {shareItems && <ShareCard items={shareItems} onClose={() => setShareItems(null)} flash={flash} />}
 
       {picker && <StorePicker onClose={() => setPicker(false)} onPick={(st) => { setShip((p) => ({ ...p, storeName: st.name, storeCode: st.code })); setPicker(false); }} />}
@@ -650,6 +656,7 @@ function StorePicker({ onPick, onClose }: { onPick: (s: Store) => void; onClose:
           <p className="flex items-center gap-1 font-bold"><MapPin className="h-5 w-5 text-primary" /> 選擇 7-11 取貨門市</p>
           <Button variant="bare" size="bare" onClick={onClose} aria-label="關閉"><X className="h-5 w-5" /></Button>
         </div>
+        <OfficialStoreLookup />
         <div className="grid grid-cols-2 gap-2">
           <select aria-label="縣市" className={field} value={city} onChange={async (e) => {
             setCity(e.target.value); setTown(""); setTownList([]);

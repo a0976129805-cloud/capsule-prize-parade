@@ -27,3 +27,4 @@
 - Reserve new draws and sets in a server-derived member vault through a verified session; attach pending collectibles in the same locked RPC and credit them only on first checkout through a transactional trigger. Expiry deletes pending cards with their vault rows. Existing guest vaults are not implicitly migrated.
 - Restore member presentation on initial and refreshed sessions without cache refetches; identity transitions alone invalidate routes and queries, while server writes revalidate the user.
 - Keep collectible numbering stable and resolve each card to its own bundled illustration; catalog changes must preserve existing owned card numbers.
+- Keep first-visit guidance browser-safe and checkout acknowledgements local to presentation; never replace authoritative stock, price or shipping validation with UI checks.
