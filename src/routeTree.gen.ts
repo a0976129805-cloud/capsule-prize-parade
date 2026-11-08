@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as SetsRouteImport } from './routes/sets'
 import { Route as VaultRouteImport } from './routes/vault'
@@ -18,6 +19,11 @@ import { Route as ApiPublicImgSplatRouteImport } from './routes/api/public/img.$
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrdersRoute = OrdersRouteImport.update({
@@ -43,6 +49,7 @@ const ApiPublicImgSplatRoute = ApiPublicImgSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/orders': typeof OrdersRoute
   '/sets': typeof SetsRoute
   '/vault': typeof VaultRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/orders': typeof OrdersRoute
   '/sets': typeof SetsRoute
   '/vault': typeof VaultRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/orders': typeof OrdersRoute
   '/sets': typeof SetsRoute
   '/vault': typeof VaultRoute
@@ -65,14 +74,23 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/orders' | '/sets' | '/vault' | '/api/public/img/$'
+  fullPaths:
+    '/' | '/auth' | '/orders' | '/sets' | '/vault' | '/api/public/img/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/orders' | '/sets' | '/vault' | '/api/public/img/$'
-  id: '__root__' | '/' | '/orders' | '/sets' | '/vault' | '/api/public/img/$'
+  to: '/' | '/auth' | '/orders' | '/sets' | '/vault' | '/api/public/img/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/orders'
+    | '/sets'
+    | '/vault'
+    | '/api/public/img/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
   OrdersRoute: typeof OrdersRoute
   SetsRoute: typeof SetsRoute
   VaultRoute: typeof VaultRoute
@@ -86,6 +104,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/orders': {
@@ -121,6 +146,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
   OrdersRoute: OrdersRoute,
   SetsRoute: SetsRoute,
   VaultRoute: VaultRoute,
