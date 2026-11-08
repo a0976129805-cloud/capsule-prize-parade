@@ -20,7 +20,8 @@ import { buildMyshipRows } from "@/lib/exportMyship";
 import { DrawFeed } from '@/components/boutique/draw-feed';
 import { ShareCard } from '@/components/boutique/share-card';
 import { repeatDrawCount } from '@/lib/draw-results';
-import { createGachaAudio } from '@/lib/gacha-audio';
+import { createGachaAudio, type GachaCue } from '@/lib/gacha-audio';
+import { GACHA_TIMING, gachaDropDuration } from '@/lib/gacha-timing';
 import { PrizeGallery } from '@/components/boutique/prize-gallery';
 import { DrawResultDialog } from '@/components/boutique/draw-result-dialog';
 import { MachineOrderList } from '@/components/boutique/machine-order-list';
@@ -77,7 +78,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   const [sound, setSound] = useState(false);
   const soundRef = useRef(false);
   const audioRef = useRef<ReturnType<typeof createGachaAudio> | null>(null);
-  const soundCue = (cue: 'turn' | 'drop' | 'reveal', count = 1, lastOne = false) => { if (soundRef.current) audioRef.current?.play(cue, count, lastOne); };
+  const soundCue = (cue: GachaCue, count = 1, lastOne = false) => { if (soundRef.current) audioRef.current?.play(cue, count, lastOne); };
   const toggleSound = () => {
     const next = !soundRef.current;
     soundRef.current = next; setSound(next);
@@ -92,7 +93,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<VaultItem[] | null>(null);
   const [shareItems, setShareItems] = useState<VaultItem[] | null>(null);
-  const [phase, setPhase] = useState<null | "spin" | "drop" | "open">(null);
+  const [phase, setPhase] = useState<null | "coin" | "spin" | "drop" | "open">(null);
   const [ship, setShip] = useState<Shipping>(emptyShip);
   const [agreed, setAgreed] = useState(false);
   const [picker, setPicker] = useState(false);
@@ -151,20 +152,23 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
     if (spinning) return;
     setSpinning(true); setSkipped(false); setAnimationCount(count);
     if (soundRef.current) { audioRef.current ??= createGachaAudio(); audioRef.current.unlock(); }
-    soundCue('turn');
-    setPhase("spin");
+    audioRef.current?.stop();
+    soundCue('coin');
+    setPhase("coin");
     const req = doDraw({ data: { machineId: selected.id, count, deviceId: getDeviceId() } }).catch(() => ({ ok: false as const, error: "連線失敗，請再試一次" }));
-    const dropDuration = count === 5 ? 1600 : 950;
-    const t1 = setTimeout(() => { setPhase("drop"); soundCue('drop', count); }, 1600);
-    const t2 = setTimeout(() => { setPhase("open"); }, 1600 + dropDuration);
+    const dropAt = GACHA_TIMING.coinMs + GACHA_TIMING.turnMs;
+    const openAt = dropAt + gachaDropDuration(count);
+    const t0 = setTimeout(() => { setPhase("spin"); soundCue('turn'); }, GACHA_TIMING.coinMs);
+    const t1 = setTimeout(() => { setPhase("drop"); soundCue('drop', count); }, dropAt);
+    const t2 = setTimeout(() => { setPhase("open"); soundCue('open', count); }, openAt);
     const animation = new Promise<void>((resolve) => {
-      const t3 = setTimeout(resolve, 1600 + dropDuration + (count === 5 ? 1500 : 850));
-      skipRef.current = () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); audioRef.current?.stop(); setSkipped(true); resolve(); };
+      const t3 = setTimeout(resolve, openAt + GACHA_TIMING.openMs + (count - 1) * GACHA_TIMING.capsuleStepMs);
+      skipRef.current = () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); audioRef.current?.stop(); setSkipped(true); resolve(); };
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) skipRef.current();
     });
     const [r] = await Promise.all([req, animation]);
-    clearTimeout(t1); clearTimeout(t2); skipRef.current = null;
-    if (!r.ok) { clearTimeout(t1); clearTimeout(t2); setSpinning(false); setPhase(null); reloadMachines(); return flash(r.error); }
+    clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); skipRef.current = null;
+    if (!r.ok) { audioRef.current?.stop(); setSpinning(false); setPhase(null); reloadMachines(); return flash(r.error); }
     setVault((p) => [...p, ...r.items]);
     reloadMachines();
     setSpinning(false);
