@@ -22,6 +22,13 @@
       "when": 1793932366487,
       "tag": "0002_set_purchase_and_release",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794112719855,
+      "tag": "0003_last_one_and_real_draw_events",
+      "breakpoints": true
     }
   ]
 }
