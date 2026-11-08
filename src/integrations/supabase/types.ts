@@ -35,6 +35,24 @@ export type Database = {
         }
         Relationships: []
       }
+      album_device_links: {
+        Row: {
+          device_id: string
+          linked_at: string
+          user_id: string
+        }
+        Insert: {
+          device_id: string
+          linked_at?: string
+          user_id: string
+        }
+        Update: {
+          device_id?: string
+          linked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cat_cards: {
         Row: {
           card_no: number
@@ -53,6 +71,21 @@ export type Database = {
           copies?: number
           device_id?: string
           first_at?: string
+        }
+        Relationships: []
+      }
+      device_album_claims: {
+        Row: {
+          device_id: string
+          page: number
+        }
+        Insert: {
+          device_id: string
+          page: number
+        }
+        Update: {
+          device_id?: string
+          page?: number
         }
         Relationships: []
       }
@@ -77,6 +110,45 @@ export type Database = {
           is_last_one?: boolean
           machine_title?: string
           prize_name?: string
+        }
+        Relationships: []
+      }
+      member_album_claims: {
+        Row: {
+          created_at: string
+          page: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          page: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          page?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      member_cat_cards: {
+        Row: {
+          card_no: number
+          copies: number
+          first_at: string
+          user_id: string
+        }
+        Insert: {
+          card_no: number
+          copies?: number
+          first_at?: string
+          user_id: string
+        }
+        Update: {
+          card_no?: number
+          copies?: number
+          first_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -376,6 +448,10 @@ export type Database = {
         Args: { _device: string; _nos: number[] }
         Returns: undefined
       }
+      add_cat_cards_routed: {
+        Args: { _device: string; _nos: number[]; _user?: string }
+        Returns: undefined
+      }
       award_last_one: {
         Args: { _device: string; _product: string }
         Returns: {
@@ -458,6 +534,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      merge_cat_album: {
+        Args: { _device: string; _user: string }
+        Returns: undefined
       }
       release_expired_vault: {
         Args: { _cutoff: string; _device?: string }

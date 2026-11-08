@@ -109,7 +109,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   useEffect(() => { setDeviceId(getDeviceId()); }, []);
   const [tag, setTag] = useState<"all" | "low" | "lastone" | "plenty">("all");
   const qc = useQueryClient();
-  const refreshAlbum = () => { if (deviceId) void qc.invalidateQueries({ queryKey: albumQueryKey(deviceId) }); };
+  const refreshAlbum = () => { void qc.invalidateQueries({ queryKey: ['album'] }); };
   const [shareItems, setShareItems] = useState<VaultItem[] | null>(null);
   const [phase, setPhase] = useState<null | "coin" | "spin" | "drop" | "open">(null);
   const [ship, setShip] = useState<Shipping>(emptyShip);
