@@ -81,8 +81,8 @@ export function CatAlbum({ deviceId, onClose, flash, onLogin }: { deviceId: stri
         </div>
         <div className="album-page grid grid-cols-5 gap-1.5 p-2">
           {album.isLoading ? <p className="col-span-5 py-10 text-center text-xs text-muted-foreground">翻開卡冊中…</p> : cards.map((c) => owned.has(c.no)
-            ? <Button key={c.no} variant="ghost" aria-label={`查看 ${cardLabel(c.no)}`} onClick={() => setView(c.no)} className="h-auto min-w-0 p-0 text-left"><CatCardView no={c.no} copies={owned.get(c.no)} /></Button>
-            : pending.has(c.no) ? <div key={c.no} className="relative min-w-0"><CatCardView no={c.no} className="opacity-40 grayscale"/><span className="absolute inset-x-0 bottom-1 bg-background/90 text-center text-[9px] font-bold">待結帳 ×{pending.get(c.no)}</span></div>
+            ? <Button key={c.no} variant="ghost" aria-label={`查看 ${cardLabel(c.no)}`} onClick={() => setView(c.no)} className="h-auto min-w-0 p-0 text-left"><CatCardView no={c.no} copies={owned.get(c.no)} className="cat-card-lit" /></Button>
+            : pending.has(c.no) ? <div key={c.no} className="relative min-w-0"><CatCardView no={c.no} className="cat-card-pending"/><span className="absolute inset-x-0 bottom-1 bg-background/90 text-center text-[9px] font-bold">待結帳 ×{pending.get(c.no)}</span></div>
             : <div key={c.no} className="cat-card-locked flex aspect-[3/4.6] flex-col items-center justify-center text-muted-foreground"><span className="text-lg">?</span><span className="text-[9px] font-bold">{cardLabel(c.no)}</span></div>)}
         </div>
         <div className="mt-2 flex justify-center gap-1.5">{PAGES.map((_, i) => <button key={i} type="button" aria-label={`第 ${i + 1} 頁`} onClick={() => setPage(i + 1)} className={`h-2 rounded-full transition-all ${page === i + 1 ? 'w-5 bg-accent' : 'w-2 bg-primary-foreground/50'}`} />)}</div>

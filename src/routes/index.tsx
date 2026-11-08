@@ -37,7 +37,7 @@ import { CatAlbum, albumQueryKey } from "@/components/boutique/cat-album";
 import { cardLabel } from "@/lib/cat-cards";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Sparkles, Package, ShoppingBag, Settings, RotateCw, ArrowLeft,
+  Sparkles, Package, ShoppingBag, Settings, ArrowLeft,
   Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle, Menu, Upload, MessageCircle, Instagram, BookOpen, ShieldCheck, Lock, Share2, Gift, Volume2, VolumeX, ZoomIn,
 } from "lucide-react";
 
@@ -309,10 +309,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
                 {selected.totalStock > 0 && selected.totalStock <= 3 && <p className="mt-2 flex items-center gap-1 text-xs font-bold text-destructive"><AlertTriangle className="h-4 w-4" />あとわずか・僅剩 {selected.totalStock} 顆</p>}
               </div>
             </div>
-            <div className="flex flex-col items-center gap-4 rounded-2xl bg-secondary p-6">
-              <div className={`flex h-24 w-24 items-center justify-center rounded-full border-4 border-card bg-[linear-gradient(180deg,var(--primary)_50%,var(--card)_50%)] shadow-lg ${spinning ? "animate-capsule" : ""}`}>
-                <RotateCw className="h-8 w-8 text-secondary-foreground" />
-              </div>
+            <div className="py-2">
               {selected.totalStock <= 0 ? (
                 <p className="w-full rounded-full bg-muted py-3 text-center font-bold text-muted-foreground">完売御礼・已完售</p>
               ) : (
