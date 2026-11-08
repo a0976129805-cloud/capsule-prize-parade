@@ -7,7 +7,7 @@ import { CatCardView } from './cat-card';
 import { CARDS } from '@/lib/cat-cards';
 
 export function DrawResultDialog({ items, cards = [], onAlbum, canRepeat, repeatCount = 1, repeatPrice, onClose, onRepeat, onVault, onShare }: {
-  items: VaultItem[]; cards?: number[]; onAlbum?: () => void; canRepeat: boolean; repeatCount?: 1 | 5; repeatPrice?: number; onClose: () => void; onRepeat: () => void; onVault: () => void; onShare: () => void;
+  items: VaultItem[]; cards?: number[]; onAlbum?: () => void; canRepeat: boolean; repeatCount?: 1 | 5; repeatPrice?: number | undefined; onClose: () => void; onRepeat: () => void; onVault: () => void; onShare: () => void;
 }) {
   const lastOne = items.some((item) => item.isLastOne);
   return <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}><DialogPortal>
