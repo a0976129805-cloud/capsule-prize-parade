@@ -17,3 +17,4 @@
 - Award last-one gifts inside the locked stock transaction, once per machine including set purchases; never reset the award on machine edits or expired reservations.
 - Persist only anonymous product summaries in draw events; public activity reads use the publishable client and never expose device or shipping identifiers.
 - Render share cards from actual result items in browser-safe boutique components, with on-demand image generation and a download fallback.
+- Keep optional synthesized gacha audio gesture-initialized and local to the browser; activity thumbnails match current public product summaries without adding customer data.
