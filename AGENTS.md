@@ -28,3 +28,4 @@
 - Restore member presentation on initial and refreshed sessions without cache refetches; identity transitions alone invalidate routes and queries, while server writes revalidate the user.
 - Keep collectible numbering stable and resolve each card to its own bundled illustration; catalog changes must preserve existing owned card numbers.
 - Keep first-visit guidance browser-safe and checkout acknowledgements local to presentation; never replace authoritative stock, price or shipping validation with UI checks.
+- Group repeated vault prizes only in browser presentation using prize identity and stored snapshots; retain individual reservations for totals, expiry and checkout.

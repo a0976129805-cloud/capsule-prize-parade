@@ -24,6 +24,7 @@ import { createGachaAudio, type GachaCue } from '@/lib/gacha-audio';
 import { GACHA_TIMING, gachaDropDuration } from '@/lib/gacha-timing';
 import { PrizeGallery } from '@/components/boutique/prize-gallery';
 import { DrawResultDialog } from '@/components/boutique/draw-result-dialog';
+import { VaultPrizes } from '@/components/boutique/vault-prizes';
 import { MemberDrawPrompt, OfficialStoreLookup, StorefrontFaq } from '@/components/boutique/first-visit';
 import { canSubmitCheckout, PICKUP_DAYS } from '@/lib/checkout-consent';
 import { MachineOrderList } from '@/components/boutique/machine-order-list';
@@ -354,14 +355,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
             <Rules />
             {vault.length === 0 ? <Empty text="倉庫空空的，快去轉蛋吧！" /> : (
               <>
-                <div className="grid grid-cols-3 gap-2">
-                  {vault.map((v) => (
-                    <div key={v.vaultId} className="overflow-hidden rounded-lg border-2 border-border bg-card">
-                      <img src={v.image} alt={v.name} className="aspect-square w-full object-cover" />
-                      <div className="p-1.5"><p className="text-xs font-bold leading-tight">{v.name}</p><p className="text-[10px] text-muted-foreground">{v.isLastOne ? '🎊 最後賞贈品' : `NT$${v.price}`}</p></div>
-                    </div>
-                  ))}
-                </div>
+                <VaultPrizes items={vault} />
                 <form onSubmit={checkout} className="space-y-3 rounded-lg border border-border bg-card p-4">
                   <p className="flex items-center gap-2 font-bold"><Truck className="h-5 w-5 text-primary" /> 7-11 賣貨便・整單出貨（共 {vault.length} 顆）</p>
                   {([["name", "收件人姓名（請填證件姓名）", "text"], ["phone", "手機號碼（09 開頭 10 碼）", "tel"], ["email", "Email", "email"]] as const).map(([k, l, t]) => (
