@@ -117,8 +117,9 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       const r = await doSet({ data: { machineId: setMachine.id, deviceId: getDeviceId() } });
       if (!r.ok) { flash(r.error); return; }
       await reloadVault(); await reloadMachines();
-      setSetMachine(null); go('vault');
+      setSetMachine(null);
       if (r.items.some((i) => i.isLastOne)) { setResult(r.items); return; }
+      go('vault');
       flash("全套已保留，請填寫收件資料完成整倉出貨");
     } catch { flash("購買失敗，請再試一次"); }
     finally { setBuying(false); }
