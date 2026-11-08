@@ -90,7 +90,7 @@ export const createOrder = createServerFn({ method: "POST" })
       if(error || !auth.user)throw new Error('請重新登入');
       userId=auth.user.id;
     }
-    const {data:result,error}=await db.rpc('checkout_vault',{_device:deviceId,_shipping:s,...(data.couponId?{_coupon:data.couponId,_user:userId}: {})});
+    const {data:result,error}=await db.rpc('checkout_vault',{_device:deviceId,_shipping:s,...(data.couponId&&userId?{_coupon:data.couponId,_user:userId}: {})});
     if(error)throw new Error(error.message);
     return result as {id:string;total:number;discount:number};
   });
