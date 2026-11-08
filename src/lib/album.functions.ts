@@ -10,17 +10,19 @@ export const memberAlbum = createServerFn({ method: 'POST' })
   .inputValidator((d: { deviceId: string }) => ({ deviceId: dev(d.deviceId) }))
   .handler(async ({ context, data }) => {
     const { supabaseAdmin: db } = await import('@/integrations/supabase/client.server');
-    const [cards, claims, guest, link, cfg] = await Promise.all([
+    const [cards, claims, guest, link, cfg, pending] = await Promise.all([
       context.supabase.from('member_cat_cards').select('card_no,copies').eq('user_id', context.userId),
       context.supabase.from('member_album_claims').select('page').eq('user_id', context.userId),
       db.from('cat_cards').select('card_no,copies').eq('device_id', data.deviceId),
       db.from('album_device_links').select('user_id').eq('device_id', data.deviceId).maybeSingle(),
       db.from('reward_settings').select('data').eq('id', 1).maybeSingle(),
+      db.from('vault_items').select('pending_cards').eq('member_id', context.userId).is('order_id', null).gt('drawn_at', new Date(Date.now()-24*60*60*1000).toISOString()),
     ]);
-    if (cards.error || claims.error || guest.error || link.error) throw new Error('讀取卡冊失敗');
+    if (cards.error || claims.error || guest.error || link.error || pending.error) throw new Error('讀取卡冊失敗');
     const parsed = rewardSettingsSchema.safeParse(cfg.data?.data);
     const reward = parsed.success ? parsed.data.album : ALBUM_DEFAULT;
     return {
+      pending: (pending.data ?? []).flatMap(r => r.pending_cards),
       cards: (cards.data ?? []).map(r => ({ no: r.card_no, copies: r.copies })),
       claimed: (claims.data ?? []).map(r => r.page),
       reward: { enabled: reward.enabled && reward.amount > 0, amount: reward.amount, minimum: reward.minimum },
@@ -52,6 +54,7 @@ export const myAlbum = createServerFn({ method: 'POST' })
     const parsed = rewardSettingsSchema.safeParse(cfg.data?.data);
     const album = parsed.success ? parsed.data.album : ALBUM_DEFAULT;
     return {
+      pending: [] as number[],
       cards: (c.data ?? []).map((r) => ({ no: r.card_no, copies: r.copies })),
       claimed: (k.data ?? []).map((r) => r.page),
       reward: { enabled: album.enabled && album.amount > 0, amount: album.amount, minimum: album.minimum },

@@ -14,12 +14,6 @@ async function optionalMember(db: Awaited<ReturnType<typeof admin>>) {
   return data.user.id;
 }
 
-async function dropCards(db: Awaited<ReturnType<typeof admin>>, device: string, n: number, user?: string) {
-  const nos = rollCards(n);
-  const { error } = await db.rpc("add_cat_cards_routed", { _device: device, _nos: nos, ...(user ? { _user: user } : {}) });
-  return error ? [] : nos;
-}
-
 export type Item = { id: string; name: string; image: string; stock: number };
 export type Machine = { id: string; title: string; price: number; totalStock: number; setPrice: number; coverImage: string; status: string; items: Item[]; lastOneName?: string; lastOneImage?: string; lastOneAwarded?: boolean };
 export type VaultItem = { vaultId: string; id: string; name: string; image: string; machineTitle: string; drawnAt: string; price: number; isLastOne?: boolean };
@@ -62,8 +56,10 @@ export const myVault = createServerFn({ method: "POST" })
   .validator((d: { deviceId: string }) => ({ deviceId: dev(d.deviceId) }))
   .handler(async ({ data }) => {
     const db = await admin();
-    await purgeExpired(db, data.deviceId);
-    const { data: rows } = await db.from("vault_items").select("*").eq("device_id", data.deviceId).is("order_id", null).order("drawn_at");
+    const user = await optionalMember(db);
+    const owner = user ? `member:${user}` : data.deviceId;
+    await purgeExpired(db, owner);
+    const { data: rows } = await db.from("vault_items").select("*").eq("device_id", owner).is("order_id", null).order("drawn_at");
     return (rows ?? []).map(toVault);
   });
 
@@ -73,10 +69,12 @@ export const drawPrizes = createServerFn({ method: "POST" })
     if (!data.deviceId) return { ok: false as const, error: "裝置識別失敗" };
     const db = await admin();
     const user = await optionalMember(db);
-    const { data: rows, error } = await db.rpc("draw_prizes", { _product: data.machineId, _n: data.count, _device: data.deviceId });
-    if (error) return { ok: false as const, error: "抽獎失敗，請再試一次" };
+    if (!user) return { ok: false as const, error: "請先登入會員再抽蛋" };
+    const cards = rollCards(data.count);
+    const { data: rows, error } = await db.rpc("reserve_member_draw", { _user: user, _product: data.machineId, _nos: cards, _device: `member:${user}` });
+    if (error) return { ok: false as const, error: error.message.includes("姓名") ? "請先到會員帳戶填寫姓名與電話" : "抽獎失敗，請再試一次" };
     if (!rows?.length) return { ok: false as const, error: "庫存不足！" };
-    return { ok: true as const, items: (rows as VRow[]).map(toVault), cards: await dropCards(db, data.deviceId, rows.length, user) };
+    return { ok: true as const, items: (rows as VRow[]).map(toVault), cards };
   });
 
 export const buySet = createServerFn({ method: "POST" })
@@ -85,10 +83,12 @@ export const buySet = createServerFn({ method: "POST" })
     if (!data.deviceId) return { ok: false as const, error: "裝置識別失敗" };
     const db = await admin();
     const user = await optionalMember(db);
-    const { data: rows, error } = await db.rpc("buy_set", { _product: data.machineId, _device: data.deviceId });
-    if (error) return { ok: false as const, error: "購買失敗，請再試一次" };
+    if (!user) return { ok: false as const, error: "請先登入會員再購買" };
+    const cards = rollCards(1);
+    const { data: rows, error } = await db.rpc("reserve_member_draw", { _user: user, _product: data.machineId, _nos: cards, _set: true, _device: `member:${user}` });
+    if (error) return { ok: false as const, error: error.message.includes("姓名") ? "請先到會員帳戶填寫姓名與電話" : "購買失敗，請再試一次" };
     if (!rows?.length) return { ok: false as const, error: "整套已無法購買（有款式售完）" };
-    return { ok: true as const, items: (rows as VRow[]).map(toVault), cards: await dropCards(db, data.deviceId, 1, user) };
+    return { ok: true as const, items: (rows as VRow[]).map(toVault), cards };
   });
 
 /** Ships EVERY unexpired item in the device's vault as one order; partial picking is not allowed. */
@@ -100,15 +100,10 @@ export const createOrder = createServerFn({ method: "POST" })
     if (!data.agreed) throw new Error("請先同意出貨規則");
     if (!s.name?.trim() || !/^09\d{8}$/.test(s.phone) || !/^\S+@\S+\.\S+$/.test(s.email) || !s.storeName?.trim() || !/^\d{6}$/.test(s.storeCode)) throw new Error("資料不完整");
     const db = await admin();
-    let userId: string | undefined;
-    if (data.couponId) {
-      const bearer=getRequestHeader('authorization');
-      if(!bearer?.startsWith('Bearer '))throw new Error('使用折價券需登入');
-      const {data:auth,error}=await db.auth.getUser(bearer.slice(7));
-      if(error || !auth.user)throw new Error('請重新登入');
-      userId=auth.user.id;
-    }
-    const {data:result,error}=await db.rpc('checkout_vault',{_device:deviceId,_shipping:s,...(data.couponId&&userId?{_coupon:data.couponId,_user:userId}: {})});
+    const userId = await optionalMember(db);
+    if (!userId) throw new Error('請先登入會員結帳');
+    const owner = `member:${userId}`;
+    const {data:result,error}=await db.rpc('checkout_vault',{_device:owner,_shipping:s,_user:userId,...(data.couponId?{_coupon:data.couponId}: {})});
     if(error)throw new Error(error.message);
     return result as {id:string;total:number;discount:number};
   });
@@ -124,7 +119,9 @@ export const myOrders = createServerFn({ method: "POST" })
   .validator((d: { deviceId: string }) => ({ deviceId: dev(d.deviceId) }))
   .handler(async ({ data }) => {
     const db = await admin();
-    const { data: rows } = await db.from("orders").select("*").eq("device_id", data.deviceId).order("created_at", { ascending: false });
+    const user = await optionalMember(db);
+    const owner = user ? `member:${user}` : data.deviceId;
+    const { data: rows } = await db.from("orders").select("*").eq("device_id", owner).order("created_at", { ascending: false });
     return (rows ?? []).map(toOrder);
   });
 

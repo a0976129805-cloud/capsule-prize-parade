@@ -151,6 +151,12 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   }, []);
 
   useEffect(() => {
+    if (!member.ready) return;
+    setVault([]); setOrders([]);
+    void reloadVault(); void reloadOrders();
+  }, [member.ready, member.userId]);
+
+  useEffect(() => {
     setTab(initialTab); setSelectedId(null);
   }, [initialTab]);
 
@@ -165,6 +171,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
 
   const purchaseSet = async () => {
     if (!setMachine || buying) return;
+    if (!member.ready) return flash("確認登入狀態中…");
+    if (!member.userId) { navigate({to:"/auth"}); return; }
     setBuying(true);
     try {
       const r = await doSet({ data: { machineId: setMachine.id, deviceId: getDeviceId() } });
@@ -173,7 +181,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       setSetMachine(null);
       setNewCards(r.cards ?? []); refreshAlbum();
       if (r.items.some((i) => i.isLastOne)) { setResult(r.items); return; }
-      if (r.cards?.length) flash(`🐾 獲得貓咪收藏卡 ${cardLabel(r.cards[0]!)}！已收進卡冊`);
+      if (r.cards?.length) flash(`🐾 獲得貓咪收藏卡 ${cardLabel(r.cards[0] ?? 1)}！結帳後正式入冊`);
       go('vault');
       flash("全套已保留，請填寫收件資料完成整倉出貨");
     } catch { flash("購買失敗，請再試一次"); }
@@ -181,6 +189,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   };
 
   const draw = async (count: number) => {
+    if (!member.ready) return flash("確認登入狀態中…");
+    if (!member.userId) { navigate({to:"/auth"}); return; }
     if (!selected || selected.totalStock < count) return flash("庫存不足！");
     if (spinning) return;
     setSpinning(true); setSkipped(false); setAnimationCount(count);
@@ -224,6 +234,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       await wallet.refetch();
     } catch { setSending(false); return flash("送出失敗，請確認資料後再試一次"); }
     setSending(false);
+    refreshAlbum();
     setVault([]); setShip(emptyShip); setAgreed(false);setCouponChoice('auto');
     await reloadOrders();
     flash("🎉 出貨申請已送出！");
