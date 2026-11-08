@@ -13,3 +13,7 @@
 - Calculate shipping from stored item-price subtotal for both random draws and complete sets, so the same threshold applies to both.
 - Export myShip rows in the official ten-column layout; file generation does not create a shipment or provide platform verification macros.
 - Use dedicated public content routes for sets, vault and orders, sharing the storefront shell rather than another routing framework.
+- Use TanStack navigation for all storefront destinations so the URL, back button, and page metadata stay in sync.
+- Award last-one gifts inside the locked stock transaction, once per machine including set purchases; never reset the award on machine edits or expired reservations.
+- Persist only anonymous product summaries in draw events; public activity reads use the publishable client and never expose device or shipping identifiers.
+- Render share cards from actual result items in browser-safe boutique components, with on-demand image generation and a download fallback.

@@ -123,6 +123,11 @@ button, input, textarea, select { font-family: inherit; }
 .boutique-progress::-webkit-progress-value { background: var(--primary); border-radius: 8px; transition: width .4s; }
 .dock-art { position: relative; display: block; width: 34px; height: 29px; }
 .dock-art i, .dock-art b { position: absolute; display: block; }
+.dock-set-bag { width: 27px; height: 23px; left: 2px; bottom: 0; border: 1.5px solid var(--secondary-foreground); background: var(--secondary); border-radius: 3px; }
+.dock-set-bag::before { content: ''; position: absolute; width: 11px; height: 7px; top: -7px; left: 6px; border: 2px solid var(--secondary-foreground); border-bottom: 0; border-radius: 6px 6px 0 0; }
+.dock-set-capsule { width: 13px; height: 13px; bottom: 3px; right: 0; border: 1px solid var(--primary); border-radius: 50%; background: linear-gradient(var(--primary) 50%, var(--card) 50%); }
+.dock-set-star { top: -3px; right: 0; font-size: 12px; color: var(--accent-foreground); }
+.share-print { font-family: var(--font-round); }
 .dock-globe { width: 22px; height: 19px; border: 2px solid var(--primary); background: var(--card); border-radius: 50% 50% 20% 20%; left: 6px; top: 0; }
 .dock-globe::after { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); left: 4px; top: 5px; box-shadow: 6px 3px var(--secondary-foreground); }
 .dock-base { width: 24px; height: 13px; background: var(--primary); border-radius: 3px; left: 5px; bottom: 0; }

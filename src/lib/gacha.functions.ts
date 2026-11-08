@@ -4,8 +4,8 @@ import { orderTotal, isExpired, VAULT_MS } from "@/lib/shipping";
 import { emptySeller, type Seller } from "@/lib/export711";
 
 export type Item = { id: string; name: string; image: string; stock: number };
-export type Machine = { id: string; title: string; price: number; totalStock: number; setPrice: number; coverImage: string; status: string; items: Item[] };
-export type VaultItem = { vaultId: string; id: string; name: string; image: string; machineTitle: string; drawnAt: string; price: number };
+export type Machine = { id: string; title: string; price: number; totalStock: number; setPrice: number; coverImage: string; status: string; items: Item[]; lastOneName?: string; lastOneImage?: string; lastOneAwarded?: boolean };
+export type VaultItem = { vaultId: string; id: string; name: string; image: string; machineTitle: string; drawnAt: string; price: number; isLastOne?: boolean };
 export type Shipping = { name: string; phone: string; email: string; storeName: string; storeCode: string };
 export type Order = { id: string; items: VaultItem[]; shipping: Shipping; total: number; fee: number; count: number; createdAt: string; status: string };
 
@@ -28,12 +28,12 @@ export const listMachines = createServerFn({ method: "GET" }).handler(async () =
   ]);
   return (p ?? []).map((m): Machine => {
     const items = (z ?? []).filter((x) => x.product_id === m.id).map((x) => ({ id: x.id, name: x.name, image: x.image, stock: x.stock }));
-    return { id: m.id, title: m.title, price: m.price, setPrice: m.set_price ?? 0, coverImage: m.cover_image, status: m.status, items, totalStock: items.reduce((a, i) => a + i.stock, 0) };
+    return { id: m.id, title: m.title, price: m.price, setPrice: m.set_price ?? 0, coverImage: m.cover_image, status: m.status, items, totalStock: items.reduce((a, i) => a + i.stock, 0), lastOneName: m.last_one_name, lastOneImage: m.last_one_image, lastOneAwarded: m.last_one_awarded };
   });
 });
 
-type VRow = { id: string; prize_id: string; name: string; image: string; machine_title: string; price: number; drawn_at: string };
-const toVault = (r: VRow): VaultItem => ({ vaultId: r.id, id: r.prize_id, name: r.name, image: r.image, machineTitle: r.machine_title, price: r.price, drawnAt: r.drawn_at });
+type VRow = { id: string; prize_id: string; name: string; image: string; machine_title: string; price: number; drawn_at: string; is_last_one?: boolean };
+const toVault = (r: VRow): VaultItem => ({ vaultId: r.id, id: r.prize_id, name: r.name, image: r.image, machineTitle: r.machine_title, price: r.price, drawnAt: r.drawn_at, isLastOne: r.is_last_one ?? false });
 
 /** Releases (returns to machine stock) unordered vault items older than the free storage period. */
 async function purgeExpired(db: Awaited<ReturnType<typeof admin>>, deviceId?: string) {
@@ -135,7 +135,7 @@ export const adminSaveMachine = createServerFn({ method: "POST" })
     const db = await admin();
     const items = m.items.map((it) => ({ ...it, stock: Math.max(0, Math.floor(Number(it.stock) || 0)) }));
     const total = items.reduce((a, i) => a + i.stock, 0);
-    const { error } = await db.from("products").upsert({ id: m.id, title: m.title, price: m.price, total_stock: total, set_price: Math.max(0, Math.floor(Number(m.setPrice) || 0)), cover_image: m.coverImage, status: m.status });
+    const { error } = await db.from("products").upsert({ id: m.id, title: m.title, price: m.price, total_stock: total, set_price: Math.max(0, Math.floor(Number(m.setPrice) || 0)), cover_image: m.coverImage, status: m.status, last_one_name: String(m.lastOneName ?? '').trim().slice(0, 120), last_one_image: String(m.lastOneImage ?? '').slice(0, 2000) });
     if (error) throw new Error(error.message);
     await db.from("prizes").delete().eq("product_id", m.id);
     if (items.length) await db.from("prizes").insert(items.map((it, i) => ({ id: it.id, product_id: m.id, name: it.name, image: it.image, stock: it.stock, sort: i })));

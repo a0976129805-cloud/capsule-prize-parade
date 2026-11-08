@@ -12,6 +12,7 @@ export function GachaScene({ phase, skipped, onSkip }: { phase: 'spin' | 'drop' 
     <Button variant="outline" className="mt-4 rounded-full" disabled={skipped} onClick={onSkip}><FastForward />跳過動畫</Button>
   </div>;
 }
-export function DockIcon({ kind }: { kind: 'home' | 'vault' | 'orders' }) {
+export function DockIcon({ kind }: { kind: 'home' | 'sets' | 'vault' | 'orders' }) {
+  if (kind === 'sets') return <span aria-hidden="true" className="dock-art dock-sets"><i className="dock-set-bag" /><i className="dock-set-capsule" /><b className="dock-set-star">✦</b></span>;
   return <span aria-hidden="true" className={`dock-art dock-${kind}`}>{kind === 'home' ? <><i className="dock-globe" /><i className="dock-base"><b /></i></> : kind === 'vault' ? <><i className="dock-box" /><i className="dock-cat">∧ ∧</i></> : <><i className="dock-parcel" /><i className="dock-truck" /><b className="dock-wheel one" /><b className="dock-wheel two" /></>}</span>;
 }

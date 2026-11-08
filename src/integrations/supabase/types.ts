@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      draw_events: {
+        Row: {
+          created_at: string
+          id: string
+          is_last_one: boolean
+          machine_title: string
+          prize_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_last_one?: boolean
+          machine_title: string
+          prize_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_last_one?: boolean
+          machine_title?: string
+          prize_name?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string
@@ -102,6 +126,9 @@ export type Database = {
           cover_image: string
           created_at: string
           id: string
+          last_one_awarded: boolean
+          last_one_image: string
+          last_one_name: string
           price: number
           set_price: number
           sort: number
@@ -113,6 +140,9 @@ export type Database = {
           cover_image?: string
           created_at?: string
           id: string
+          last_one_awarded?: boolean
+          last_one_image?: string
+          last_one_name?: string
           price?: number
           set_price?: number
           sort?: number
@@ -124,6 +154,9 @@ export type Database = {
           cover_image?: string
           created_at?: string
           id?: string
+          last_one_awarded?: boolean
+          last_one_image?: string
+          last_one_name?: string
           price?: number
           set_price?: number
           sort?: number
@@ -154,6 +187,7 @@ export type Database = {
           drawn_at: string
           id: string
           image: string
+          is_last_one: boolean
           machine_title: string
           name: string
           order_id: string | null
@@ -166,6 +200,7 @@ export type Database = {
           drawn_at?: string
           id?: string
           image?: string
+          is_last_one?: boolean
           machine_title?: string
           name?: string
           order_id?: string | null
@@ -178,6 +213,7 @@ export type Database = {
           drawn_at?: string
           id?: string
           image?: string
+          is_last_one?: boolean
           machine_title?: string
           name?: string
           order_id?: string | null
@@ -192,6 +228,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_last_one: {
+        Args: { _device: string; _product: string }
+        Returns: {
+          device_id: string
+          drawn_at: string
+          id: string
+          image: string
+          is_last_one: boolean
+          machine_title: string
+          name: string
+          order_id: string | null
+          price: number
+          prize_id: string
+          product_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "vault_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       buy_set: {
         Args: { _device: string; _product: string }
         Returns: {
@@ -199,6 +257,7 @@ export type Database = {
           drawn_at: string
           id: string
           image: string
+          is_last_one: boolean
           machine_title: string
           name: string
           order_id: string | null
@@ -220,6 +279,7 @@ export type Database = {
           drawn_at: string
           id: string
           image: string
+          is_last_one: boolean
           machine_title: string
           name: string
           order_id: string | null
