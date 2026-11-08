@@ -51,7 +51,7 @@ export function ShippingProgress({ subtotal }: { subtotal: number }) {
 
 export function TrustStrip({ onDaily }: { onDaily?: () => void }) {
   return <div className={`grid ${onDaily ? 'grid-cols-4' : 'grid-cols-3'} gap-1 border-y border-border py-3 text-center text-[10px] text-muted-foreground`}>
-    <div className="flex flex-col items-center gap-1"><ShieldCheck className="h-4 w-4 text-secondary-foreground" />7-11 到店付款</div>
+    <div className="flex flex-col items-center gap-1"><ShieldCheck className="h-4 w-4 text-secondary-foreground" />7-11 貨到付款</div>
     <div className="flex flex-col items-center gap-1"><PackageCheck className="h-4 w-4 text-secondary-foreground" />日本正版扭蛋</div>
     {onDaily && <Button variant="bare" size="bare" className="flex min-w-0 flex-col items-center gap-1 text-[10px] font-bold text-primary" onClick={onDaily}><Sparkles className="h-4 w-4" />每日御神籤</Button>}
     <div className="flex flex-col items-center gap-1"><Truck className="h-4 w-4 text-secondary-foreground" />全館滿千免運</div>
