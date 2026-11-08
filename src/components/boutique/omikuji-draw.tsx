@@ -40,7 +40,8 @@ const BLESSINGS: Record<string, { ja: string; zh: string }> = {
   吉: { ja: '穏やかで良い一日になりますように。', zh: '平安順心，祝你有美好的一天。' },
 };
 export function blessingFor(title: string) {
-  return BLESSINGS[title] ?? Object.entries(BLESSINGS).find(([k]) => title.includes(k))?.[1] ?? { ja: '穏やかで良い一日になりますように。', zh: '平安順心，祝你有美好的一天。' };
+  const hit = BLESSINGS[title] ?? Object.entries(BLESSINGS).find(([k]) => title.includes(k))?.[1];
+  return hit ?? { ja: '穏やかで良い一日になりますように。', zh: '平安順心，祝你有美好的一天。' };
 }
 
 function Tube({ shaking, revealed }: { shaking: boolean; revealed: boolean }) {
