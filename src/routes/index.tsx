@@ -31,6 +31,10 @@ import { useMember } from '@/components/boutique/member-session';
 import { getMemberContact } from '@/lib/member-contact.functions';
 import { bestCoupon, couponDiscount, usableCoupon } from '@/lib/rewards';
 import catLogo from "@/assets/cat-logo.png";
+import { CatAlbum, albumQueryKey } from "@/components/boutique/cat-album";
+import { cardLabel } from "@/lib/cat-cards";
+import { useQueryClient } from "@tanstack/react-query";
+import { BookOpen } from "lucide-react";
 import {
   Sparkles, Package, ShoppingBag, Settings, RotateCw, ArrowLeft,
   Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle, Menu, Upload, MessageCircle, Instagram, BookOpen, ShieldCheck, Lock, Share2, Gift, Volume2, VolumeX, ZoomIn,
@@ -100,6 +104,13 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   }, []);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<VaultItem[] | null>(null);
+  const [newCards, setNewCards] = useState<number[]>([]);
+  const [albumOpen, setAlbumOpen] = useState(false);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  useEffect(() => { setDeviceId(getDeviceId()); }, []);
+  const [tag, setTag] = useState<"all" | "low" | "lastone" | "plenty">("all");
+  const qc = useQueryClient();
+  const refreshAlbum = () => { if (deviceId) void qc.invalidateQueries({ queryKey: albumQueryKey(deviceId) }); };
   const [shareItems, setShareItems] = useState<VaultItem[] | null>(null);
   const [phase, setPhase] = useState<null | "coin" | "spin" | "drop" | "open">(null);
   const [ship, setShip] = useState<Shipping>(emptyShip);
@@ -161,7 +172,9 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       if (!r.ok) { flash(r.error); return; }
       await reloadVault(); await reloadMachines();
       setSetMachine(null);
+      setNewCards(r.cards ?? []); refreshAlbum();
       if (r.items.some((i) => i.isLastOne)) { setResult(r.items); return; }
+      if (r.cards?.length) flash(`🐾 獲得貓咪收藏卡 ${cardLabel(r.cards[0])}！已收進卡冊`);
       go('vault');
       flash("全套已保留，請填寫收件資料完成整倉出貨");
     } catch { flash("購買失敗，請再試一次"); }
@@ -196,6 +209,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
     setPhase(null);
     audioRef.current?.stop();
     soundCue('reveal', count, r.items.some((item) => item.isLastOne));
+    setNewCards(r.cards ?? []); refreshAlbum();
     setResult(r.items);
   };
 
@@ -236,12 +250,13 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
             <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
             <DrawFeed machines={machines} />
-            <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><Button variant="secondary" size="sm" className="rounded-full" onClick={() => go('sets')}><ShoppingBag />整套賣場</Button></div>
-            {loading && <p className="py-8 text-center text-sm text-muted-foreground">正在載入扭蛋機台…</p>}
+            <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><div className="flex gap-1.5"><Button size="sm" className="rounded-full" onClick={() => setAlbumOpen(true)}><BookOpen />貓咪卡冊</Button><Button variant="secondary" size="sm" className="rounded-full" onClick={() => go('sets')}><ShoppingBag />整套</Button></div></div>
+            {machines.length > 0 && <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label="機台分類">{([["all", "全部"], ["low", "🔥 即將完售"], ["lastone", "🎁 最後賞告急"], ["plenty", "✨ 庫存充足"]] as const).map(([k, l]) => <Button key={k} role="tab" aria-selected={tag === k} size="sm" variant={tag === k ? "default" : "outline"} className="shrink-0 rounded-full" onClick={() => setTag(k)}>{l}</Button>)}</div>}
+            {loading && <div className="py-8 text-center" role="status"><div className="cat-loader"><img src={catLogo} alt="" className="cat-loader-cat" /><span className="cat-loader-ball" /></div><p className="mt-2 text-sm text-muted-foreground">奶油貓正在搬機台…</p></div>}
             {loadError && <Button variant="outline" className="w-full" onClick={reloadMachines}>讀取失敗・重新載入</Button>}
             {!loading && !loadError && machines.length === 0 && <Empty text="店長正在準備新機台" />}
             <div className="grid grid-cols-2 gap-3">
-            {machines.map((m) => (
+            {machines.filter((m) => tag === "all" || (tag === "low" && m.totalStock > 0 && m.totalStock <= 5) || (tag === "lastone" && !!m.lastOneName && !m.lastOneAwarded && m.totalStock > 0 && m.totalStock <= 10) || (tag === "plenty" && m.totalStock > 10)).map((m) => (
               <Button variant="bare" size="bare" key={m.id} onClick={() => setSelectedId(m.id)} className="flex flex-col overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm transition active:scale-[.97]">
                 <div className="relative aspect-square bg-muted">
                   <img src={m.coverImage} alt={m.title} loading="lazy" className="h-full w-full object-cover" />
@@ -251,6 +266,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
                 <div className="p-2">
                   <p className="line-clamp-2 text-xs font-bold leading-snug">{m.title}</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">全 {m.items.length} 種・剩餘 {m.totalStock} 顆</p>
+                  {m.totalStock > 0 && <p className="mt-0.5 line-clamp-2 text-[10px] text-secondary-foreground">{m.items.filter((i) => i.stock > 0).length}/{m.items.length} 款可抽{m.items.some((i) => i.stock > 0 && i.stock <= 2) ? "・有款式剩最後幾顆" : ""}</p>}
                 </div>
               </Button>
             ))}
@@ -392,7 +408,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       {galleryIndex !== null && selected && <PrizeGallery machine={selected} index={galleryIndex} onIndex={setGalleryIndex} onClose={() => setGalleryIndex(null)} onDraw={() => { setGalleryIndex(null); draw(1); }} />}
       {phase && <GachaScene phase={phase} count={animationCount} sound={sound} onSound={toggleSound} skipped={skipped} onSkip={() => skipRef.current?.()} />}
 
-      {result && <DrawResultDialog items={result} canRepeat={!spinning && !!selected && selected.totalStock >= repeatDrawCount(result)} onClose={() => { setResult(null); audioRef.current?.stop(); }} onRepeat={() => { const n = repeatDrawCount(result); audioRef.current?.stop(); setResult(null); draw(n); }} onVault={() => { audioRef.current?.stop(); setResult(null); go('vault'); }} onShare={() => setShareItems(result)} />}
+      {albumOpen && deviceId && <CatAlbum deviceId={deviceId} onClose={() => setAlbumOpen(false)} flash={flash} onLogin={() => { setAlbumOpen(false); go("coupons"); }} />}
+      {result && <DrawResultDialog cards={newCards} onAlbum={() => { setResult(null); setAlbumOpen(true); }} items={result} canRepeat={!spinning && !!selected && selected.totalStock >= repeatDrawCount(result)} onClose={() => { setResult(null); audioRef.current?.stop(); }} onRepeat={() => { const n = repeatDrawCount(result); audioRef.current?.stop(); setResult(null); draw(n); }} onVault={() => { audioRef.current?.stop(); setResult(null); go('vault'); }} onShare={() => setShareItems(result)} />}
       {shareItems && <ShareCard items={shareItems} onClose={() => setShareItems(null)} flash={flash} />}
 
       {picker && <StorePicker onClose={() => setPicker(false)} onPick={(st) => { setShip((p) => ({ ...p, storeName: st.name, storeCode: st.code })); setPicker(false); }} />}
