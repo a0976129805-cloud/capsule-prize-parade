@@ -19,4 +19,5 @@
 - Persist only anonymous product summaries in draw events; public activity reads use the publishable client and never expose device or shipping identifiers.
 - Render share cards from actual result items in browser-safe boutique components, with on-demand image generation and a download fallback.
 - Keep optional synthesized gacha audio gesture-initialized and local to the browser; activity thumbnails match current public product summaries without adding customer data.
+- Share gacha phase timing between the browser animation controller and audio scheduling; cancel pending cues on skip, mute, failure and dismissal to prevent overlapping effects.
 - Use the shared Radix result dialog for dismissal and focus trapping; display scarcity from actual remaining stock, not invented percentage baselines.
