@@ -37,7 +37,7 @@ import { CatAlbum, albumQueryKey } from "@/components/boutique/cat-album";
 import { cardLabel } from "@/lib/cat-cards";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Sparkles, Package, ShoppingBag, Settings, ArrowLeft,
+  Coins, Sparkles, Package, ShoppingBag, Settings, ArrowLeft,
   Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle, Menu, Upload, MessageCircle, Instagram, BookOpen, ShieldCheck, Lock, Share2, Gift, Volume2, VolumeX, ZoomIn,
 } from "lucide-react";
 
@@ -309,14 +309,16 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
                 {selected.totalStock > 0 && selected.totalStock <= 3 && <p className="mt-2 flex items-center gap-1 text-xs font-bold text-destructive"><AlertTriangle className="h-4 w-4" />あとわずか・僅剩 {selected.totalStock} 顆</p>}
               </div>
             </div>
-            <div className="py-2">
+            <div className="pb-2 pt-4">
               {selected.totalStock <= 0 ? (
                 <p className="w-full rounded-full bg-muted py-3 text-center font-bold text-muted-foreground">完売御礼・已完售</p>
               ) : (
               <div className="grid w-full grid-cols-2 gap-3">
                 {[1, 5].map((n) => (
-                  <Button variant="bare" size="bare" key={n} disabled={spinning || selected.totalStock < n} onClick={() => draw(n)} className="rounded-full bg-primary py-3 font-bold text-primary-foreground shadow-md transition active:scale-95 disabled:opacity-50">
-                    {n === 1 ? "單抽" : "五連抽"}<span className="block text-xs font-medium">{selected.totalStock < n ? "剩餘不足" : `NT$${selected.price * n}`}</span>
+                  <Button variant={n === 1 ? "drawSingle" : "drawMulti"} size="bare" key={n} disabled={spinning || selected.totalStock < n} onClick={() => draw(n)} className="relative min-h-20 min-w-0 flex-col gap-1 rounded-xl px-2 py-3 font-bold" aria-label={`${n === 1 ? "投幣單抽" : "五連抽"}・NT$${selected.price * n}${selected.totalStock < n ? "・剩餘不足" : ""}`}>
+                    {n === 5 && selected.totalStock >= 5 && <span className="absolute -top-3 right-2 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold leading-4 text-primary-foreground"><Sparkles aria-hidden="true" className="!size-3" />連抽推薦</span>}
+                    <span className="inline-flex items-center gap-1.5 text-base leading-6">{n === 1 ? <Coins aria-hidden="true" className="!size-5" /> : <Sparkles aria-hidden="true" className="!size-5" />}{n === 1 ? "投幣單抽" : "五連抽"}</span>
+                    <span className="text-sm font-bold tabular-nums leading-5">{selected.totalStock < n ? "剩餘不足" : `NT$${selected.price * n}`}</span>
                   </Button>
                 ))}
               </div>

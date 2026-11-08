@@ -111,6 +111,8 @@
   --capsule-blue: oklch(0.76 0.1 235);
   --capsule-reflection: linear-gradient(125deg, oklch(1 0 0 / .8), transparent 45%);
   --machine-metal: linear-gradient(130deg, var(--card), var(--border), var(--card));
+  --draw-edge: oklch(0.72 0.12 80);
+  --draw-shadow: 0 4px 0 var(--draw-edge), 0 6px 10px color-mix(in oklch, var(--foreground) 8%, transparent);
 }
 
 body { font-family: var(--font-round); background-image: var(--dots); background-size: 18px 18px; }
@@ -282,6 +284,7 @@ button, input, textarea, select { font-family: inherit; }
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+  --draw-edge: oklch(0.64 0.1 80);
 }
 
 @layer base {
@@ -350,3 +353,11 @@ button, input, textarea, select { font-family: inherit; }
 .cat-card.cat-card-pending { opacity: .58; box-shadow: none; }
 .cat-card.cat-card-pending::after { display: none; }
 .cat-card.cat-card-lit { box-shadow: 0 0 0 1px color-mix(in oklch, var(--frame) 70%, transparent), 0 0 12px -3px var(--frame); }
+
+.draw-choice { border: 1.5px solid var(--draw-edge); box-shadow: var(--draw-shadow); transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease; }
+.draw-choice-single { background: color-mix(in oklch, var(--card) 90%, var(--accent)); color: var(--accent-foreground); }
+.draw-choice-multi { background: var(--accent); color: var(--accent-foreground); }
+@media (hover: hover) { .draw-choice:not(:disabled):hover { transform: translateY(-1px); } }
+.draw-choice:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px 0 var(--draw-edge); }
+.draw-choice:disabled { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .draw-choice { transition: none; } }
