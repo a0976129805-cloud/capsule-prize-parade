@@ -7,23 +7,21 @@ import catLogo from '@/assets/cat-logo.png';
 export function ShareCard({ items, onClose, flash }: { items: VaultItem[]; onClose: () => void; flash: (message: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const t = setTimeout(() => { if (ref.current) renderPng(ref.current).then((b) => { if (alive) setFile(new File([b], '奶油貓-我的扭蛋收藏.png', { type: 'image/png' })); }).catch(() => {}); }, 400);
+    return () => { alive = false; clearTimeout(t); };
+  }, []);
   const save = async (share: boolean) => {
     if (!ref.current || busy) return;
     setBusy(true);
     try {
-      await document.fonts.ready;
-      const { toBlob } = await import('html-to-image');
-      const blob = await toBlob(ref.current, { pixelRatio: 2, cacheBust: true });
-      if (!blob) throw new Error('empty');
-      const file = new File([blob], '奶油貓-我的扭蛋收藏.png', { type: 'image/png' });
-      if (share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: '奶油貓・我的扭蛋收藏' });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = file.name; a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
-        flash(share ? '此瀏覽器不支援直接分享，已下載收藏卡' : '收藏卡已下載');
-      }
+      const f = file ?? new File([await renderPng(ref.current)], '奶油貓-我的扭蛋收藏.png', { type: 'image/png' });
+      setFile(f);
+      const r = await shareOrDownload(f, share, { title: '奶油貓・我的扭蛋收藏' });
+      if (r === 'downloaded') { setPreview(URL.createObjectURL(f)); flash(share ? '已產生圖片，可長按圖片儲存或分享' : '收藏卡已下載'); }
     } catch (e) {
       if (!(e instanceof Error && e.name === 'AbortError')) flash('分享卡製作失敗，請再試一次');
     } finally { setBusy(false); }
