@@ -342,3 +342,8 @@ button, input, textarea, select { font-family: inherit; }
 @keyframes omikuji-breathe { 50% { box-shadow: 0 0 0 2px var(--card), 0 0 0 5px color-mix(in oklch, var(--primary) 45%, transparent); } }
 .album-btn { background: var(--accent); color: var(--accent-foreground); border: 1.5px solid var(--accent-foreground); box-shadow: 0 2px 0 var(--accent-foreground); }
 .album-btn:active { transform: translateY(2px); box-shadow: none; }
+
+/* Stable, fully visible export; thumbnails do not run holographic loops. */
+[data-export], [data-export] *, [data-export]::after, [data-export] *::after { animation: none !important; transition: none !important; }
+[data-export] { opacity: 1 !important; transform: none !important; }
+.cat-card[data-big="false"]::after { animation: none; }
