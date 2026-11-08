@@ -298,3 +298,11 @@ button, input, textarea, select { font-family: inherit; }
 .google-member-button { background: var(--google-auth-background); border-color: var(--google-auth-border); color: var(--google-auth-text); font-weight: 500; }
 :root { --google-auth-background: #ffffff; --google-auth-border: #747775; --google-auth-text: #1f1f1f; }
 .dark { --google-auth-background: #131314; --google-auth-border: #8e918f; --google-auth-text: #e3e3e3; }
+
+@keyframes omikuji-shake { 0%,100%{transform:rotate(0)} 20%{transform:rotate(-3deg) translateX(-4px)} 40%{transform:rotate(3deg) translateX(4px)} 60%{transform:rotate(-2deg)} 80%{transform:rotate(2deg)} }
+@keyframes omikuji-stick { 0%,60%{transform:translateY(0);opacity:0} 100%{transform:translateY(-40px);opacity:1} }
+@keyframes omikuji-paper { from{transform:scaleY(.1);opacity:0} to{transform:scaleY(1);opacity:1} }
+.omikuji-shake { animation: omikuji-shake .35s ease-in-out infinite; transform-origin: 40% 80%; }
+.omikuji-stick { animation: omikuji-stick 1.6s ease-out forwards; }
+.omikuji-paper { animation: omikuji-paper .5s ease-out; transform-origin: top; }
+@media (prefers-reduced-motion: reduce) { .omikuji-shake,.omikuji-stick,.omikuji-paper { animation: none; } }

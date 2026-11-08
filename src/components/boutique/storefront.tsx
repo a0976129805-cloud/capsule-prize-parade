@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, PackageCheck, ShieldCheck, Truck, X, ShoppingBag, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PackageCheck, ShieldCheck, Truck, X, ShoppingBag } from 'lucide-react';
+import { TrustInfoDialog, type TrustTopic } from './trust-info';
+import shrine from '@/assets/omikuji-shrine.jpg';
 import type { Machine } from '@/lib/gacha.functions';
 import { FREE_SHIP_AMOUNT, SHIP_FEE } from '@/lib/shipping';
 import boutique from '@/assets/gacha-boutique.jpg';
@@ -50,12 +52,14 @@ export function ShippingProgress({ subtotal }: { subtotal: number }) {
 }
 
 export function TrustStrip({ onDaily }: { onDaily?: () => void }) {
-  return <div className={`grid ${onDaily ? 'grid-cols-4' : 'grid-cols-3'} gap-1 border-y border-border py-3 text-center text-[10px] text-muted-foreground`}>
-    <div className="flex flex-col items-center gap-1"><ShieldCheck className="h-4 w-4 text-secondary-foreground" />7-11 貨到付款</div>
-    <div className="flex flex-col items-center gap-1"><PackageCheck className="h-4 w-4 text-secondary-foreground" />日本正版扭蛋</div>
-    {onDaily && <Button variant="bare" size="bare" className="flex min-w-0 flex-col items-center gap-1 text-[10px] font-bold text-primary" onClick={onDaily}><Sparkles className="h-4 w-4" />每日御神籤</Button>}
-    <div className="flex flex-col items-center gap-1"><Truck className="h-4 w-4 text-secondary-foreground" />全館滿千免運</div>
-  </div>;
+  const [topic, setTopic] = useState<TrustTopic | null>(null);
+  const item = 'flex min-w-0 flex-col items-center gap-1 rounded-lg py-1 text-[10px] text-muted-foreground active:bg-muted';
+  return <><div className={`grid ${onDaily ? 'grid-cols-4' : 'grid-cols-3'} gap-1 border-y border-border py-2 text-center`}>
+    <Button variant="bare" size="bare" className={item} onClick={() => setTopic('cod')}><ShieldCheck className="h-4 w-4 text-secondary-foreground" />7-11 貨到付款</Button>
+    <Button variant="bare" size="bare" className={item} onClick={() => setTopic('genuine')}><PackageCheck className="h-4 w-4 text-secondary-foreground" />日本正版扭蛋</Button>
+    {onDaily && <Button variant="bare" size="bare" className={`${item} font-bold text-primary`} onClick={onDaily}><img src={shrine} alt="" width={1024} height={768} className="h-5 w-7 rounded object-cover" />每日御神籤</Button>}
+    <Button variant="bare" size="bare" className={item} onClick={() => setTopic('shipping')}><Truck className="h-4 w-4 text-secondary-foreground" />全館滿千免運</Button>
+  </div><TrustInfoDialog topic={topic} onClose={() => setTopic(null)} /></>;
 }
 
 export function SetPopup({ machine, busy, onClose, onBuy }: { machine: Machine; busy: boolean; onClose: () => void; onBuy: () => void }) {
