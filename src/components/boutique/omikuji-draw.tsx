@@ -70,11 +70,11 @@ export function OmikujiDraw({ state, onShake, onClose }: { state: OmikujiState |
           <Tube shaking={false} revealed />
           <div className="omikuji-paper mx-auto mt-3 max-w-[14rem] rounded-sm border-2 border-primary bg-card px-4 py-5">
             <p className="text-xs font-bold text-primary">御神籤</p>
-            <p className="mt-2 text-3xl font-bold tracking-widest text-primary">{state.title}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{state.detail}</p>
+            <p className="mt-2 text-3xl font-bold tracking-widest text-primary">{state?.phase==="result"&&state.title}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{state && "detail" in state && state.detail}</p>
           </div>
         </>}
-        {phase === 'error' && <p className="text-sm text-muted-foreground">{state.detail}</p>}
+        {phase === 'error' && <p className="text-sm text-muted-foreground">{state && "detail" in state && state.detail}</p>}
         {(phase === 'result' || phase === 'error') && <Button className="mt-4 w-full" onClick={onClose}>收下・回到票夾</Button>}
       </div>
     </DialogContent>
