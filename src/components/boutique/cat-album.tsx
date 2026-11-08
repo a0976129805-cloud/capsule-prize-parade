@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { renderPng, shareOrDownload } from '@/lib/share-image';
 import { useServerFn } from '@tanstack/react-start';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Download, Share2, X } from 'lucide-react';
@@ -23,23 +24,23 @@ export function useAlbum(deviceId: string | null) {
 
 export function CardViewer({ no, onClose, flash }: { no: number; onClose: () => void; flash: (m: string) => void }) {
   const ref = useRef<HTMLDivElement>(null); const [busy, setBusy] = useState(false);
+  const [file, setFile] = useState<File | null>(null); const [preview, setPreview] = useState<string | null>(null);
+  const fname = `奶油貓卡-${cardLabel(no)}.png`;
+  useEffect(() => { let alive = true; const t = setTimeout(() => { if (ref.current) renderPng(ref.current).then((b) => { if (alive) setFile(new File([b], fname, { type: 'image/png' })); }).catch(() => {}); }, 900); return () => { alive = false; clearTimeout(t); }; }, [fname]);
   const save = async (share: boolean) => {
     if (!ref.current || busy) return; setBusy(true);
     try {
-      const { toBlob } = await import('html-to-image');
-      const blob = await toBlob(ref.current, { pixelRatio: 3, cacheBust: true });
-      if (!blob) throw new Error('empty');
-      const file = new File([blob], `奶油貓卡-${cardLabel(no)}.png`, { type: 'image/png' });
-      if (share && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: '我抽到奶油貓收藏卡！', text: `我在奶油貓ガチャ屋抽到 ${cardLabel(no)} ${CARDS[no - 1]!.name}！` });
-      else { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 10000); flash(share ? '此瀏覽器不支援直接分享，已下載卡片' : '卡片已存到下載'); }
+      const f = file ?? new File([await renderPng(ref.current)], fname, { type: 'image/png' }); setFile(f);
+      const r = await shareOrDownload(f, share, { title: '我抽到奶油貓收藏卡！', text: `我在奶油貓ガチャ屋抽到 ${cardLabel(no)} ${CARDS[no - 1]!.name}！` });
+      if (r === 'downloaded') { setPreview(URL.createObjectURL(f)); flash(share ? '已產生圖片，可長按圖片儲存或分享' : '卡片已存到下載'); }
     } catch (e) { if (!(e instanceof Error && e.name === 'AbortError')) flash('卡片製作失敗，請再試一次'); } finally { setBusy(false); }
   };
   return <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}><DialogPortal><DialogOverlay className="bg-overlay z-[70]" />
     <DialogPrimitive.Content aria-label="收藏卡大圖" className="fixed left-1/2 top-1/2 z-[70] w-[min(20rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2">
       <DialogTitle className="sr-only">{cardLabel(no)} {CARDS[no - 1]!.name}</DialogTitle>
       <Button variant="secondary" size="icon" aria-label="關閉卡片" onClick={onClose} className="absolute -right-2 -top-12 h-10 w-10 rounded-full"><X /></Button>
-      <CatCardView ref={ref} no={no} big className="card-reveal" />
-      <div className="mt-3 grid grid-cols-2 gap-2"><Button variant="secondary" disabled={busy} onClick={() => save(false)}><Download />存到手機</Button><Button disabled={busy} onClick={() => save(true)}><Share2 />{busy ? '製作中…' : '分享給好友'}</Button></div>
+      {preview ? <><p className="mb-1 text-center text-xs text-primary-foreground">長按圖片即可儲存或分享</p><img src={preview} alt={`${cardLabel(no)} 卡片圖片`} className="w-full rounded-xl" /></> : <CatCardView ref={ref} no={no} big className="card-reveal" />}
+      <div className="mt-3 grid grid-cols-2 gap-2"><Button variant="secondary" disabled={busy} onClick={() => save(false)}><Download />存到手機</Button><Button disabled={busy} onClick={() => save(true)}><Share2 />{busy ? '製作中…' : file ? '分享給好友' : '準備中…'}</Button></div>
     </DialogPrimitive.Content></DialogPortal></Dialog>;
 }
 

@@ -249,7 +249,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
             <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
             <DrawFeed machines={machines} />
-            <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><div className="flex gap-1.5"><Button size="sm" className="rounded-full" onClick={() => setAlbumOpen(true)}><BookOpen />貓咪卡冊</Button><Button variant="secondary" size="sm" className="rounded-full" onClick={() => go('sets')}><ShoppingBag />整套</Button></div></div>
+            <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><Button variant="bare" size="bare" className="album-btn flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-xs font-bold" onClick={() => setAlbumOpen(true)}><img src={catLogo} alt="" className="h-7 w-7 rounded-full bg-card object-cover" /><span className="leading-tight">貓咪卡冊<span className="block text-[9px] font-medium">🐾 收集 50 張</span></span></Button></div>
             {machines.length > 0 && <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label="機台分類">{([["all", "全部"], ["low", "🔥 即將完售"], ["lastone", "🎁 最後賞告急"], ["plenty", "✨ 庫存充足"]] as const).map(([k, l]) => <Button key={k} role="tab" aria-selected={tag === k} size="sm" variant={tag === k ? "default" : "outline"} className="shrink-0 rounded-full" onClick={() => setTag(k)}>{l}</Button>)}</div>}
             {loading && <div className="py-8 text-center" role="status"><div className="cat-loader"><img src={catLogo} alt="" className="cat-loader-cat" /><span className="cat-loader-ball" /></div><p className="mt-2 text-sm text-muted-foreground">奶油貓正在搬機台…</p></div>}
             {loadError && <Button variant="outline" className="w-full" onClick={reloadMachines}>讀取失敗・重新載入</Button>}
@@ -263,9 +263,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
                   <span className="absolute bottom-1.5 right-1.5 rounded-full bg-card/90 px-2 py-0.5 text-sm font-bold text-primary">NT${m.price}</span>
                 </div>
                 <div className="p-2">
-                  <p className="line-clamp-2 text-xs font-bold leading-snug">{m.title}</p>
+                  <p className="line-clamp-2 min-h-[2.5em] break-words text-xs font-bold leading-[1.25]" title={m.title}>{m.title}</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">全 {m.items.length} 種・剩餘 {m.totalStock} 顆</p>
-                  {m.totalStock > 0 && <p className="mt-0.5 line-clamp-2 text-[10px] text-secondary-foreground">{m.items.filter((i) => i.stock > 0).length}/{m.items.length} 款可抽{m.items.some((i) => i.stock > 0 && i.stock <= 2) ? "・有款式剩最後幾顆" : ""}</p>}
                 </div>
               </Button>
             ))}

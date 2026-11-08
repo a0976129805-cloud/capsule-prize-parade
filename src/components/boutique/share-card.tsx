@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { renderPng, shareOrDownload } from '@/lib/share-image';
 import { Button } from '@/components/ui/button';
 import { Download, Share2, X } from 'lucide-react';
 import type { VaultItem } from '@/lib/gacha.functions';
@@ -34,6 +35,7 @@ export function ShareCard({ items, onClose, flash }: { items: VaultItem[]; onClo
       <div className="grid grid-cols-2 gap-3">{items.map((i) => <div key={i.vaultId}><img src={i.image} alt={i.name} className="aspect-square w-full rounded-lg bg-card object-contain" /><p className="mt-2 break-words text-xs font-bold">{i.isLastOne && '🎊 最後賞・'}{i.name}</p></div>)}</div>
       <p className="mt-5 border-t border-border pt-3 text-xs font-bold">奶油貓・日本正版扭蛋</p><p className="mt-1 text-[10px] text-muted-foreground">ガチャっと、しあわせ。</p>
     </div>
-    <div className="mt-4 grid grid-cols-2 gap-2"><Button variant="outline" disabled={busy} onClick={() => save(false)}><Download />下載圖片</Button><Button disabled={busy} onClick={() => save(true)}><Share2 />{busy ? '製作中…' : '分享收藏'}</Button></div>
+    {preview && <div className="mt-3 text-center"><p className="mb-1 text-xs text-muted-foreground">長按下方圖片即可儲存或分享</p><img src={preview} alt="我的扭蛋收藏卡圖片" className="mx-auto w-full rounded-lg border border-border" /></div>}
+    <div className="mt-4 grid grid-cols-2 gap-2"><Button variant="outline" disabled={busy} onClick={() => save(false)}><Download />下載圖片</Button><Button disabled={busy} onClick={() => save(true)}><Share2 />{busy ? '製作中…' : file ? '分享收藏' : '準備中…'}</Button></div>
   </section></div>;
 }

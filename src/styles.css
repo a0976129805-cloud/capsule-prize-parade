@@ -337,3 +337,8 @@ button, input, textarea, select { font-family: inherit; }
 @keyframes loader-roll { 0%,100% { transform: translateX(0) rotate(0); } 50% { transform: translateX(28px) rotate(220deg); } }
 @keyframes loader-push { 0%,100% { transform: translateX(0); } 50% { transform: translateX(16px) rotate(-6deg); } }
 @media (prefers-reduced-motion: reduce) { .cat-card::after, .card-reveal, .cat-loader-ball, .cat-loader-cat { animation: none !important; } }
+.omikuji-ring { box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px var(--primary); }
+@media (prefers-reduced-motion: no-preference) { .omikuji-ring { animation: omikuji-breathe 2.4s ease-in-out infinite; } }
+@keyframes omikuji-breathe { 50% { box-shadow: 0 0 0 2px var(--card), 0 0 0 5px color-mix(in oklch, var(--primary) 45%, transparent); } }
+.album-btn { background: var(--accent); color: var(--accent-foreground); border: 1.5px solid var(--accent-foreground); box-shadow: 0 2px 0 var(--accent-foreground); }
+.album-btn:active { transform: translateY(2px); box-shadow: none; }

@@ -61,8 +61,8 @@ export function TrustStrip({ onDaily }: { onDaily?: () => void }) {
     { key: 'shipping', label: '全館滿千免運', img: trustArt.shipping, click: () => setTopic('shipping') },
   ];
   return <><div className={`grid ${onDaily ? 'grid-cols-4' : 'grid-cols-3'} gap-1.5 border-y border-border py-2`}>
-    {tiles.map((t) => <Button key={t.key} variant="bare" size="bare" onClick={t.click} className={`flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1 text-[10px] font-bold active:scale-95 transition-transform ${t.hot ? 'bg-secondary text-primary' : 'text-foreground'}`}>
-      <img src={t.img} alt="" width={1024} height={768} loading="lazy" className="aspect-square w-12 rounded-full object-cover" />
+    {tiles.map((t) => <Button key={t.key} variant="bare" size="bare" onClick={t.click} className={`flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1 text-[10px] font-bold active:scale-95 transition-transform text-foreground`}>
+      <span className="relative"><img src={t.img} alt="" width={1024} height={768} loading="lazy" className={`aspect-square w-12 rounded-full object-cover ${t.hot ? 'omikuji-ring' : ''}`} />{t.hot && <span className="absolute -right-2 -top-1.5 rounded-full bg-primary px-1.5 py-px text-[9px] leading-tight text-primary-foreground shadow-sm">無料</span>}</span>
       <span className="truncate text-center leading-tight">{t.label}</span>
     </Button>)}
   </div><TrustInfoDialog topic={topic} onClose={() => setTopic(null)} /></>;
