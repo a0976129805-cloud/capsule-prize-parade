@@ -22,6 +22,7 @@ import { ShareCard } from '@/components/boutique/share-card';
 import { repeatDrawCount } from '@/lib/draw-results';
 import { createGachaAudio } from '@/lib/gacha-audio';
 import { PrizeGallery } from '@/components/boutique/prize-gallery';
+import { DrawResultDialog } from '@/components/boutique/draw-result-dialog';
 import catLogo from "@/assets/cat-logo.png";
 import {
   Sparkles, Package, ShoppingBag, Settings, RotateCw, ArrowLeft,
@@ -75,7 +76,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   const [sound, setSound] = useState(false);
   const soundRef = useRef(false);
   const audioRef = useRef<ReturnType<typeof createGachaAudio> | null>(null);
-  const soundCue = (cue: 'turn' | 'drop' | 'reveal', count = 1) => { if (soundRef.current) audioRef.current?.play(cue, count); };
+  const soundCue = (cue: 'turn' | 'drop' | 'reveal', count = 1, lastOne = false) => { if (soundRef.current) audioRef.current?.play(cue, count, lastOne); };
   const toggleSound = () => {
     const next = !soundRef.current;
     soundRef.current = next; setSound(next);
@@ -168,7 +169,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
     setSpinning(false);
     setPhase(null);
     audioRef.current?.stop();
-    soundCue('reveal');
+    soundCue('reveal', count, r.items.some((item) => item.isLastOne));
     setResult(r.items);
   };
 
@@ -217,7 +218,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
               <Button variant="bare" size="bare" key={m.id} onClick={() => setSelectedId(m.id)} className="flex flex-col overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm transition active:scale-[.97]">
                 <div className="relative aspect-square bg-muted">
                   <img src={m.coverImage} alt={m.title} loading="lazy" className="h-full w-full object-cover" />
-                  <span className="absolute left-1.5 top-1.5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">{m.totalStock <= 0 ? "完売御礼" : m.totalStock <= 5 ? "残りわずか" : m.status}</span>
+                  <span className={`absolute left-1.5 top-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold ${m.totalStock > 0 && m.totalStock <= 3 ? 'bg-destructive text-destructive-foreground motion-safe:animate-pulse' : 'bg-primary text-primary-foreground'}`}>{m.totalStock <= 0 ? "完売御礼" : m.totalStock <= 3 ? "あとわずか・即將完售" : m.totalStock <= 5 ? "残りわずか" : m.status}</span>
                   <span className="absolute bottom-1.5 right-1.5 rounded-full bg-card/90 px-2 py-0.5 text-sm font-bold text-primary">NT${m.price}</span>
                 </div>
                 <div className="p-2">
@@ -248,6 +249,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
               <div className="p-4">
                 <h1 className="text-lg font-bold">{selected.title}</h1>
                 <p className="text-sm text-muted-foreground">每抽 NT${selected.price}・剩餘 {selected.totalStock} 顆</p>
+                {selected.totalStock > 0 && selected.totalStock <= 3 && <p className="mt-2 flex items-center gap-1 text-xs font-bold text-destructive"><AlertTriangle className="h-4 w-4" />あとわずか・僅剩 {selected.totalStock} 顆</p>}
               </div>
             </div>
             <div className="flex flex-col items-center gap-4 rounded-2xl bg-secondary p-6">
@@ -358,28 +360,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       {galleryIndex !== null && selected && <PrizeGallery machine={selected} index={galleryIndex} onIndex={setGalleryIndex} onClose={() => setGalleryIndex(null)} onDraw={() => { setGalleryIndex(null); draw(1); }} />}
       {phase && <GachaScene phase={phase} count={animationCount} sound={sound} onSound={toggleSound} skipped={skipped} onSkip={() => skipRef.current?.()} />}
 
-      {result && (
-        <div className="bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div role="dialog" aria-modal="true" aria-label="扭蛋開獎結果" className="animate-pop max-h-[88dvh] w-full max-w-sm overflow-y-auto rounded-2xl bg-card p-5 text-center">
-            <p className="text-xl font-bold text-primary">{result.some((i) => i.isLastOne) ? '🎊 ラストワン賞！' : '🎉 おめでとう！'}</p>
-            {result.some((i) => i.isLastOne) && <p className="my-2 rounded-lg bg-accent p-3 text-sm font-bold text-accent-foreground">恭喜抽走最後一顆！最後賞已一併存入倉庫。</p>}
-            <p className="mb-4 text-sm text-muted-foreground">商品已成功存入您的個人倉庫！</p>
-            <div className="grid grid-cols-3 gap-2">
-              {result.map((r, i) => (
-                <div key={r.vaultId} className="animate-pop" style={{ animationDelay: `${i * 0.1}s` }}>
-                  <img src={r.image} alt={r.name} className="aspect-square w-full rounded-xl object-cover" />
-                  <p className="mt-1 text-xs">{r.isLastOne && '🎊 最後賞・'}{r.name}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-5 grid grid-cols-2 gap-2">
-              <Button variant="bare" size="bare" onClick={() => { const n = repeatDrawCount(result); setResult(null); draw(n); }} disabled={spinning || !selected || selected.totalStock < repeatDrawCount(result)} className="rounded-full border-2 border-primary py-2.5 font-bold text-primary">再抽一次</Button>
-              <Button variant="bare" size="bare" onClick={() => { setResult(null); go('vault'); }} className="rounded-full bg-primary py-2.5 font-bold text-primary-foreground">查看倉庫</Button>
-            </div>
-            <Button variant="ghost" className="mt-3 w-full" onClick={() => setShareItems(result)}><Share2 />製作我的收藏分享卡</Button>
-          </div>
-        </div>
-      )}
+      {result && <DrawResultDialog items={result} canRepeat={!spinning && !!selected && selected.totalStock >= repeatDrawCount(result)} onClose={() => { setResult(null); audioRef.current?.stop(); }} onRepeat={() => { const n = repeatDrawCount(result); audioRef.current?.stop(); setResult(null); draw(n); }} onVault={() => { audioRef.current?.stop(); setResult(null); go('vault'); }} onShare={() => setShareItems(result)} />}
       {shareItems && <ShareCard items={shareItems} onClose={() => setShareItems(null)} flash={flash} />}
 
       {picker && <StorePicker onClose={() => setPicker(false)} onPick={(st) => { setShip((p) => ({ ...p, storeName: st.name, storeCode: st.code })); setPicker(false); }} />}
