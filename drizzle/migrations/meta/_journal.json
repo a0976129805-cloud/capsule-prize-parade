@@ -43,6 +43,13 @@
       "when": 1794120326872,
       "tag": "0005_member_rewards_and_atomic_checkout",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794121031158,
+      "tag": "0006_member_contact_profiles",
+      "breakpoints": true
     }
   ]
 }
