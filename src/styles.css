@@ -308,3 +308,32 @@ button, input, textarea, select { font-family: inherit; }
 .omikuji-paper { animation: omikuji-paper 1.1s ease-out both; transform-origin: top; }
 .omikuji-arrow { animation: omikuji-arrow .9s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .omikuji-tube-shake,.omikuji-stick-out,.omikuji-paper,.omikuji-arrow { animation: none; } }
+
+/* Cream-cat collectible cards */
+:root {
+  --rarity-n: oklch(0.82 0.04 80);
+  --rarity-r: oklch(0.74 0.1 235);
+  --rarity-sr: oklch(0.7 0.16 340);
+  --rarity-ssr: oklch(0.8 0.15 85);
+  --rarity-holo: linear-gradient(115deg, transparent 20%, oklch(1 0 0 / .55) 38%, oklch(0.9 0.12 200 / .35) 46%, oklch(0.92 0.13 330 / .35) 54%, transparent 70%);
+  --album-cover: oklch(0.36 0.07 40);
+  --album-page: oklch(0.96 0.03 85);
+}
+.cat-card { --frame: var(--rarity-n); position: relative; border-radius: 12px; padding: 5px; background: linear-gradient(145deg, var(--frame), oklch(0.98 0.02 85) 50%, var(--frame)); box-shadow: 0 6px 18px -8px oklch(0.3 0.05 60 / .45); overflow: hidden; }
+.cat-card[data-rarity="R"] { --frame: var(--rarity-r); }
+.cat-card[data-rarity="SR"] { --frame: var(--rarity-sr); }
+.cat-card[data-rarity="SSR"] { --frame: var(--rarity-ssr); box-shadow: 0 0 0 1px var(--rarity-ssr), 0 8px 26px -6px var(--rarity-ssr); }
+.cat-card[data-rarity="SR"]::after, .cat-card[data-rarity="SSR"]::after { content: ""; position: absolute; inset: 0; background: var(--rarity-holo); background-size: 250% 100%; mix-blend-mode: soft-light; animation: holo-sweep 3.2s ease-in-out infinite; pointer-events: none; }
+@keyframes holo-sweep { 0%,100% { background-position: 120% 0; } 50% { background-position: -20% 0; } }
+.cat-card-locked { border-radius: 12px; background: repeating-linear-gradient(45deg, var(--muted), var(--muted) 6px, var(--album-page) 6px, var(--album-page) 12px); border: 2px dashed var(--border); }
+.album-book { background: var(--album-cover); border-radius: 18px; padding: 10px; box-shadow: inset 0 0 0 3px oklch(0.75 0.1 80 / .6); }
+.album-page { background: var(--album-page); border-radius: 12px; }
+.card-reveal { animation: card-flip .9s cubic-bezier(.2,.8,.3,1.2) both; }
+@keyframes card-flip { 0% { transform: perspective(600px) rotateY(180deg) scale(.6); opacity: 0; } 60% { opacity: 1; } 100% { transform: perspective(600px) rotateY(0) scale(1); } }
+/* Loading: cat nudging a capsule */
+.cat-loader { position: relative; width: 120px; height: 56px; margin: 0 auto; }
+.cat-loader-ball { position: absolute; bottom: 4px; left: 56px; width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(180deg, var(--primary) 50%, var(--card) 50%); border: 2px solid var(--foreground); animation: loader-roll 1.2s ease-in-out infinite; }
+.cat-loader-cat { position: absolute; bottom: 0; left: 6px; width: 48px; height: 48px; animation: loader-push 1.2s ease-in-out infinite; }
+@keyframes loader-roll { 0%,100% { transform: translateX(0) rotate(0); } 50% { transform: translateX(28px) rotate(220deg); } }
+@keyframes loader-push { 0%,100% { transform: translateX(0); } 50% { transform: translateX(16px) rotate(-6deg); } }
+@media (prefers-reduced-motion: reduce) { .cat-card::after, .card-reveal, .cat-loader-ball, .cat-loader-cat { animation: none !important; } }

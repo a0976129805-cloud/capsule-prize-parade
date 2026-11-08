@@ -3,6 +3,13 @@ import { useSession, getRequestHeader } from "@tanstack/react-start/server";
 import { VAULT_MS } from "@/lib/shipping";
 import { emptySeller, type Seller } from "@/lib/export711";
 import { validateMachineOrder } from '@/lib/machine-order';
+import { rollCards } from '@/lib/cat-cards';
+
+async function dropCards(db: Awaited<ReturnType<typeof admin>>, device: string, n: number) {
+  const nos = rollCards(n);
+  const { error } = await db.rpc("add_cat_cards", { _device: device, _nos: nos });
+  return error ? [] : nos;
+}
 
 export type Item = { id: string; name: string; image: string; stock: number };
 export type Machine = { id: string; title: string; price: number; totalStock: number; setPrice: number; coverImage: string; status: string; items: Item[]; lastOneName?: string; lastOneImage?: string; lastOneAwarded?: boolean };
@@ -59,7 +66,7 @@ export const drawPrizes = createServerFn({ method: "POST" })
     const { data: rows, error } = await db.rpc("draw_prizes", { _product: data.machineId, _n: data.count, _device: data.deviceId });
     if (error) return { ok: false as const, error: "抽獎失敗，請再試一次" };
     if (!rows?.length) return { ok: false as const, error: "庫存不足！" };
-    return { ok: true as const, items: (rows as VRow[]).map(toVault) };
+    return { ok: true as const, items: (rows as VRow[]).map(toVault), cards: await dropCards(db, data.deviceId, rows.length) };
   });
 
 export const buySet = createServerFn({ method: "POST" })
@@ -70,7 +77,7 @@ export const buySet = createServerFn({ method: "POST" })
     const { data: rows, error } = await db.rpc("buy_set", { _product: data.machineId, _device: data.deviceId });
     if (error) return { ok: false as const, error: "購買失敗，請再試一次" };
     if (!rows?.length) return { ok: false as const, error: "整套已無法購買（有款式售完）" };
-    return { ok: true as const, items: (rows as VRow[]).map(toVault) };
+    return { ok: true as const, items: (rows as VRow[]).map(toVault), cards: await dropCards(db, data.deviceId, 1) };
   });
 
 /** Ships EVERY unexpired item in the device's vault as one order; partial picking is not allowed. */

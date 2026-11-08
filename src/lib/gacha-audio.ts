@@ -108,6 +108,15 @@ export function createGachaAudio() {
         [783.99, 1046.5, 1318.5, 1568].forEach((hz, i) => { tone(hz, 1.5 + i * .11, .45, .024, 'triangle', hz, .018); bell(hz * 2, 1.55 + i * .11); });
         [523.25, 659.25, 783.99, 1046.5].forEach((hz) => tone(hz, 1.98, 1, .021, 'triangle', hz, .04));
       }
+      // Soft cream-cat "nyaa~" signature: rising then falling glide with a nasal overtone.
+      const meowAt = count === 5 || lastOne ? 2.7 : 2.05;
+      const meow = ctx.createOscillator(); meow.type = 'sawtooth';
+      meow.frequency.setValueAtTime(620, base + meowAt);
+      meow.frequency.exponentialRampToValueAtTime(980, base + meowAt + .16);
+      meow.frequency.exponentialRampToValueAtTime(560, base + meowAt + .55);
+      const formant = ctx.createBiquadFilter(); formant.type = 'bandpass'; formant.Q.value = 3;
+      formant.frequency.value = 1400;
+      meow.connect(formant); connect(meow, formant, meowAt, .6, .09, .06);
     }
   };
   const play = (cue: GachaCue, count = 1, lastOne = false) => {
