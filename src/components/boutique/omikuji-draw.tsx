@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import shrine from '@/assets/omikuji-shrine.jpg';
+import tubeImg from '@/assets/omikuji-tube.jpg';
 
 export type OmikujiState = { phase: 'ready' } | { phase: 'shaking' } | { phase: 'result'; title: string; detail: string } | { phase: 'error'; detail: string };
 
@@ -33,14 +34,11 @@ function popAndChime(a: AudioContext) {
 }
 
 function Tube({ shaking, revealed }: { shaking: boolean; revealed: boolean }) {
-  return <div className={`relative mx-auto h-40 w-24 ${shaking ? 'omikuji-tube-shake' : ''}`} style={{ transformOrigin: '50% 90%' }}>
-    {revealed && <div className="omikuji-stick-out absolute left-1/2 top-0 z-0 h-24 w-3 -translate-x-1/2 rounded-sm border border-border bg-card shadow">
-      <span className="absolute inset-x-0 top-1 h-4 rounded-sm bg-primary" />
+  return <div className={`relative mx-auto w-32 ${shaking ? 'omikuji-tube-shake' : ''}`} style={{ transformOrigin: '50% 90%' }}>
+    {revealed && <div className="omikuji-stick-out absolute left-1/2 top-0 z-0 h-20 w-2.5 -translate-x-1/2 rounded-sm border border-border bg-card shadow">
+      <span className="absolute inset-x-0 top-1 h-3.5 rounded-sm bg-primary" />
     </div>}
-    <div className="absolute inset-x-0 bottom-0 z-10 flex h-32 flex-col items-center justify-center rounded-t-md rounded-b-lg border-4 border-primary bg-secondary shadow-lg">
-      <span className="mt-1 h-1.5 w-6 rounded-full bg-foreground/70" />
-      <span className="mt-3 text-lg font-bold leading-tight tracking-[0.3em] text-primary [writing-mode:vertical-rl]">御神籤</span>
-    </div>
+    <img src={tubeImg} alt="御神籤籤筒" width={225} height={425} className="relative z-10 w-full rounded-xl" draggable={false} />
   </div>;
 }
 

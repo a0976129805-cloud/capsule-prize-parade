@@ -60,10 +60,10 @@ export function TrustStrip({ onDaily }: { onDaily?: () => void }) {
     ...(onDaily ? [{ key: 'daily', label: '每日御神籤', img: shrine, click: onDaily, hot: true }] : []),
     { key: 'shipping', label: '全館滿千免運', img: trustArt.shipping, click: () => setTopic('shipping') },
   ];
-  return <><div className={`grid ${onDaily ? 'grid-cols-4' : 'grid-cols-3'} gap-2 border-y border-border py-3`}>
-    {tiles.map((t) => <Button key={t.key} variant="bare" size="bare" onClick={t.click} className={`flex min-w-0 flex-col items-stretch gap-1 rounded-xl p-1 text-[11px] font-bold active:scale-95 transition-transform ${t.hot ? 'bg-secondary text-primary' : 'text-foreground'}`}>
-      <img src={t.img} alt="" width={1024} height={768} loading="lazy" className="aspect-square w-full rounded-lg object-cover" />
-      <span className="truncate text-center">{t.label}</span>
+  return <><div className={`grid ${onDaily ? 'grid-cols-4' : 'grid-cols-3'} gap-1.5 border-y border-border py-2`}>
+    {tiles.map((t) => <Button key={t.key} variant="bare" size="bare" onClick={t.click} className={`flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1 text-[10px] font-bold active:scale-95 transition-transform ${t.hot ? 'bg-secondary text-primary' : 'text-foreground'}`}>
+      <img src={t.img} alt="" width={1024} height={768} loading="lazy" className="aspect-square w-12 rounded-full object-cover" />
+      <span className="truncate text-center leading-tight">{t.label}</span>
     </Button>)}
   </div><TrustInfoDialog topic={topic} onClose={() => setTopic(null)} /></>;
 }
