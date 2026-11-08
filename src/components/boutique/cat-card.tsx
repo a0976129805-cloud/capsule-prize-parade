@@ -13,7 +13,7 @@ import c10 from '@/assets/cats/cat-10.jpg';
 import catLogo from '@/assets/cat-logo.png';
 
 export const CAT_ART = [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10];
-const PAGE_TINT = ['hue-rotate(0deg)', 'hue-rotate(-18deg) saturate(1.15)', 'sepia(.25) saturate(1.2)', 'saturate(.75) brightness(1.06)', 'sepia(.35) saturate(1.4) brightness(1.04)'];
+const PAGE_TINT = ['none', 'saturate(1.1) hue-rotate(-6deg)', 'sepia(.18)', 'saturate(.85) brightness(1.04)', 'sepia(.3) brightness(1.03)'];
 const STARS = { N: '★', R: '★★', SR: '★★★', SSR: '★★★★' } as const;
 
 /** One collectible card; `big` shows the full trading-card layout. */
