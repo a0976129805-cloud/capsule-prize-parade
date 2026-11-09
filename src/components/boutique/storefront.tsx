@@ -7,6 +7,7 @@ import shrine from '@/assets/omikuji-shrine.jpg';
 import type { Machine } from '@/lib/gacha.functions';
 import { FREE_SHIP_AMOUNT, SHIP_FEE } from '@/lib/shipping';
 import boutique from '@/assets/gacha-boutique.jpg';
+import { FulfillmentBadge } from './fulfillment';
 
 export function BannerCarousel({ images, onSets, onGuide }: { images: string[]; onSets: () => void; onGuide: () => void }) {
   const [index, setIndex] = useState(0);
@@ -74,6 +75,7 @@ export function SetPopup({ machine, busy, onClose, onBuy }: { machine: Machine; 
   return <div className="bg-overlay fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center"><section role="dialog" aria-modal="true" aria-label="全套直購" className="max-h-[88dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-card p-5">
     <div className="flex items-start justify-between"><div><p className="text-xs font-bold text-secondary-foreground">コンプリートセット</p><h2 className="mt-1 text-xl font-bold">全套直購</h2></div><Button variant="ghost" size="icon" aria-label="關閉全套直購" disabled={busy} onClick={onClose}><X /></Button></div>
     <p className="mt-3 font-bold">{machine.title}</p><p className="mt-1 text-xs text-muted-foreground">全 {machine.items.length} 款・每款各一顆・附日本原廠蛋紙</p>
+    <FulfillmentBadge item={machine} />
     <div className="my-5 flex gap-3 overflow-x-auto pb-2">{machine.items.map((i) => <div key={i.id} className="w-28 shrink-0"><img src={i.image} alt={i.name} className="aspect-square w-full rounded-lg object-cover" /><p className="mt-2 text-xs">{i.name}</p><p className={`mt-1 text-[10px] ${i.stock > 0 ? 'text-secondary-foreground' : 'text-destructive'}`}>{i.stock > 0 ? '✓ 每款一顆' : '已售完'}</p></div>)}</div>
     <div className="flex items-baseline justify-between border-t border-border pt-3"><span className="text-sm">全套收藏價</span><span className="text-2xl font-bold text-primary">NT${machine.setPrice}</span></div>
     {regular > machine.setPrice && <p className="mt-1 text-right text-xs text-muted-foreground">單抽合計 NT${regular}・整套省 NT${regular - machine.setPrice}</p>}
