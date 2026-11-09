@@ -24,6 +24,9 @@ import { createGachaAudio, type GachaCue } from '@/lib/gacha-audio';
 import { GACHA_TIMING, gachaDropDuration } from '@/lib/gacha-timing';
 import { PrizeGallery } from '@/components/boutique/prize-gallery';
 import { DrawResultDialog } from '@/components/boutique/draw-result-dialog';
+import { AlbumProgress } from '@/components/boutique/album-progress';
+import { FulfillmentBadge, DispatchNotice } from '@/components/boutique/fulfillment';
+import { dispatchSummary, preorderConfirmed, validDispatchDate } from '@/lib/fulfillment';
 import { VaultPrizes } from '@/components/boutique/vault-prizes';
 import { MemberDrawPrompt, OfficialStoreLookup, StorefrontFaq } from '@/components/boutique/first-visit';
 import { canSubmitCheckout, PICKUP_DAYS } from '@/lib/checkout-consent';
@@ -58,7 +61,7 @@ export const Route = createFileRoute("/")({
 
 const ORDER_STATUSES = ["待出貨", "已出貨", "已取貨", "已取消"];
 const emptyShip: Shipping = { name: "", phone: "", email: "", storeName: "", storeCode: "" };
-const RULES = `倉庫商品免費暫存 ${VAULT_HOURS} 小時，申請出貨時須將倉內所有扭蛋一併結帳寄出，無法單獨挑選放棄。逾期未出貨的商品將自動釋回機台。`;
+const RULES = `倉庫商品免費暫存 ${VAULT_HOURS} 小時，申請出貨時須將倉內所有扭蛋一併結帳寄出，無法單獨挑選放棄。逾期未結帳的商品將自動釋回機台。訂單成立後依現貨／預購時程寄出，不受暫存期限影響。`;
 
 function getDeviceId() {
   let id = localStorage.getItem("gacha-device");
@@ -127,6 +130,9 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   }, [member.ready, member.userId, readMemberContact]);
   const [agreed, setAgreed] = useState(false);
   const [pickupAgreed, setPickupAgreed] = useState(false);
+  const [preorderAgreed, setPreorderAgreed] = useState(false);
+  const dispatch = dispatchSummary(vault);
+  useEffect(() => { setPreorderAgreed(false); }, [dispatch.hasPreorder, dispatch.dispatchDate, vault.length]);
   const [loginPrompt, setLoginPrompt] = useState(false);
   const [picker, setPicker] = useState(false);
   const [sending, setSending] = useState(false);
@@ -233,11 +239,12 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
     if (!/^09\d{8}$/.test(ship.phone)) return flash("請輸入 09 開頭的 10 碼手機號碼");
     if (!/^\d{6}$/.test(ship.storeCode)) return flash("請點選 7-11 取貨門市");
     if (!canSubmitCheckout(agreed, pickupAgreed)) return flash("請勾選出貨規則與 7 日內取貨承諾");
+    if (!preorderConfirmed(dispatch, preorderAgreed)) return flash("請確認預購整單出貨時間");
     setSending(true);
     try {
-      await doOrder({ data: { deviceId: getDeviceId(), shipping: { ...ship }, agreed, ...(discount&&chosenCoupon?{couponId:chosenCoupon.id}:{}) } });
+      await doOrder({ data: { deviceId: getDeviceId(), shipping: { ...ship }, agreed, preorderAgreed, dispatchDate: dispatch.dispatchDate, ...(discount&&chosenCoupon?{couponId:chosenCoupon.id}:{}) } });
       await wallet.refetch();
-    } catch { setSending(false); return flash("送出失敗，請確認資料後再試一次"); }
+    } catch (error) { setSending(false); await reloadVault(); return flash(error instanceof Error && error.message.includes("出貨時間") ? "倉庫出貨時間已變更，請重新確認" : "送出失敗，請確認資料後再試一次"); }
     setSending(false);
     refreshAlbum();
     setVault([]); setShip(emptyShip); setAgreed(false); setPickupAgreed(false);setCouponChoice('auto');
@@ -265,7 +272,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
             <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
             <DrawFeed machines={machines} />
-            <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><Button variant="bare" size="bare" className="album-btn flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-xs font-bold" onClick={() => setAlbumOpen(true)}><img src={catLogo} alt="" className="h-7 w-7 rounded-full bg-card object-cover" /><span className="leading-tight">貓咪卡冊<span className="block text-[9px] font-medium">🐾 收集 50 張</span></span></Button></div>
+            <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><AlbumProgress deviceId={deviceId} onOpen={() => setAlbumOpen(true)} /></div>
             {machines.length > 0 && <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label="機台分類">{([["all", "全部"], ["low", "🔥 即將完售"], ["lastone", "🎁 最後賞告急"], ["plenty", "✨ 庫存充足"]] as const).map(([k, l]) => <Button key={k} role="tab" aria-selected={tag === k} size="sm" variant={tag === k ? "default" : "outline"} className="shrink-0 rounded-full" onClick={() => setTag(k)}>{l}</Button>)}</div>}
             {loading && <div className="py-8 text-center" role="status"><div className="cat-loader"><img src={catLogo} alt="" className="cat-loader-cat" /><span className="cat-loader-ball" /></div><p className="mt-2 text-sm text-muted-foreground">奶油貓正在搬機台…</p></div>}
             {loadError && <Button variant="outline" className="w-full" onClick={reloadMachines}>讀取失敗・重新載入</Button>}
@@ -280,6 +287,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
                 </div>
                 <div className="w-full min-w-0 p-2 text-left">
                   <p className="line-clamp-2 min-h-[2.5em] whitespace-normal break-words text-xs font-bold leading-[1.25]" title={m.title}>{m.title}</p>
+                  <FulfillmentBadge item={m} />
                   <p className="mt-0.5 text-[10px] text-muted-foreground">全 {m.items.length} 種・剩餘 {m.totalStock} 顆</p>
                 </div>
               </Button>
@@ -294,7 +302,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
           <TrustStrip />
           <div className="grid grid-cols-2 gap-3">{machines.filter((m) => m.setPrice > 0).map((m) => <Button variant="bare" size="bare" key={m.id} onClick={() => setSetMachine(m)} className="h-auto flex-col items-stretch overflow-hidden rounded-lg border border-border bg-card p-0 text-left">
             <img src={m.coverImage} alt={m.title} className="aspect-square w-full object-cover" />
-            <div className="p-3"><span className="text-[10px] text-secondary-foreground">全 {m.items.length} 種セット</span><h2 className="mt-1 whitespace-normal text-sm font-bold">{m.title}</h2><p className="mt-2 font-bold text-primary">NT${m.setPrice}</p><p className="mt-1 text-[10px] text-muted-foreground">{m.items.every((i) => i.stock > 0) ? "每款一顆・查看全套" : "部分款式已售完"}</p></div>
+            <div className="p-3"><span className="text-[10px] text-secondary-foreground">全 {m.items.length} 種セット</span><h2 className="mt-1 whitespace-normal text-sm font-bold">{m.title}</h2><FulfillmentBadge item={m} /><p className="mt-2 font-bold text-primary">NT${m.setPrice}</p><p className="mt-1 text-[10px] text-muted-foreground">{m.items.every((i) => i.stock > 0) ? "每款一顆・查看全套" : "部分款式已售完"}</p></div>
           </Button>)}</div>
           {!machines.some((m) => m.setPrice > 0) && <Empty text="整套商品準備中，敬請期待" />}
         </div>}
@@ -306,10 +314,12 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
               <img src={selected.coverImage} alt={selected.title} className="aspect-[16/9] w-full object-cover" />
               <div className="p-4">
                 <h1 className="text-lg font-bold">{selected.title}</h1>
+                <FulfillmentBadge item={selected} />
                 <p className="text-sm text-muted-foreground">每抽 NT${selected.price}・剩餘 {selected.totalStock} 顆</p>
                 {selected.totalStock > 0 && selected.totalStock <= 3 && <p className="mt-2 flex items-center gap-1 text-xs font-bold text-destructive"><AlertTriangle className="h-4 w-4" />あとわずか・僅剩 {selected.totalStock} 顆</p>}
               </div>
             </div>
+            <DispatchNotice items={[selected]} />
             <div className="pb-2 pt-4">
               {selected.totalStock <= 0 ? (
                 <p className="w-full rounded-full bg-muted py-3 text-center font-bold text-muted-foreground">完売御礼・已完售</p>
@@ -355,6 +365,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
             <Rules />
             {vault.length === 0 ? <Empty text="倉庫空空的，快去轉蛋吧！" /> : (
               <>
+                <DispatchNotice items={vault} />
                 <VaultPrizes items={vault} />
                 <form onSubmit={checkout} className="space-y-3 rounded-lg border border-border bg-card p-4">
                   <p className="flex items-center gap-2 font-bold"><Truck className="h-5 w-5 text-primary" /> 7-11 賣貨便・整單出貨（共 {vault.length} 顆）</p>
@@ -377,7 +388,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
                   <p className="text-xs leading-relaxed text-secondary-foreground">不需先匯款。出貨申請由店長人工整理至 7-11 賣貨便，到店取貨付款；本站非 7-11 官方網站。</p>
                   <label className="flex items-start gap-2 text-xs"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" /> 我已閱讀並同意：{RULES}</label>
                   <label className="flex items-start gap-2 text-xs leading-relaxed"><input type="checkbox" required checked={pickupAgreed} onChange={(e) => setPickupAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]" /><span>我承諾於包裹到店後 {PICKUP_DAYS} 日內取貨付款，了解未取件將影響日後購買資格。</span></label>
-                  <Button variant="bare" size="bare" disabled={sending || !canSubmitCheckout(agreed, pickupAgreed)} className="w-full rounded-full bg-primary py-3 font-bold text-primary-foreground disabled:opacity-50">{sending ? "送出中…" : `📦 一鍵整單出貨（共 ${vault.length} 顆・NT$${checkoutTotal}）`}</Button>
+                  <label className="flex items-start gap-2 text-xs leading-relaxed">{dispatch.hasPreorder && <><input type="checkbox" required checked={preorderAgreed} onChange={e => setPreorderAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]" /><span>我了解本單含預購，整單預計 {dispatch.dispatchDate} 回台後統一寄出（不拆單），不是立即出貨。</span></>}</label>
+                  <Button variant="bare" size="bare" disabled={sending || !canSubmitCheckout(agreed, pickupAgreed) || !preorderConfirmed(dispatch, preorderAgreed)} className="w-full rounded-full bg-primary py-3 font-bold text-primary-foreground disabled:opacity-50">{sending ? "送出中…" : `📦 確認整倉結帳（共 ${vault.length} 顆・NT$${checkoutTotal}）`}</Button>
                 </form>
               </>
             )}
@@ -434,9 +446,10 @@ function Empty({ text }: { text: string }) {
 function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-border bg-card p-4 text-sm">
-      <div className="flex justify-between"><span className="font-bold">{o.id}</span><span className={`st-${o.status} rounded-full px-2.5 py-0.5 text-xs font-bold`}>{o.status}</span></div>
+      <div className="flex flex-wrap justify-between gap-2"><span className="break-all font-bold">{o.id}</span><span className={`st-${o.status} rounded-full px-2.5 py-0.5 text-xs font-bold`}>{o.status}</span></div>
       <p className="text-xs text-muted-foreground">{o.createdAt}・總金額 NT${o.total}</p>
       {!!o.discount&&<p className="mt-1 text-xs text-secondary-foreground">{o.couponName}・已折抵 NT${o.discount}</p>}
+      <DispatchNotice items={o.hasPreorder ? [{ fulfillmentType: 'preorder', dispatchDate: o.dispatchDate }] : o.items} ordered />
       <ul className="mt-2 divide-y divide-border rounded-xl bg-muted/60 px-3">
         {groupItems(o.items).map((g) => <li key={g.name} className="flex justify-between gap-2 py-1.5"><span>{g.name}</span><span className="shrink-0 font-bold">- {g.qty} 顆</span></li>)}
       </ul>
@@ -451,6 +464,7 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
   const [edit, setEdit] = useState<Machine | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [ostat, setOstat] = useState("待出貨");
+  const [fulfillmentFilter, setFulfillmentFilter] = useState("all");
   const getOrders = useServerFn(adminOrders);
   const setStatus = useServerFn(adminSetOrderStatus);
   const saveM = useServerFn(adminSaveMachine);
@@ -463,6 +477,7 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
   const save = async () => {
     if (!edit) return;
     if (!edit.title.trim()) return flash("請輸入名稱");
+    if (edit.fulfillmentType === 'preorder' && !validDispatchDate(edit.dispatchDate ?? '')) return flash("請設定預計出貨日期");
     try { await saveM({ data: edit }); } catch { return flash("儲存失敗"); }
     setEdit(null); reload(); flash("已儲存");
   };
@@ -490,6 +505,7 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
       </div>
       <label className="block text-xs">整套售價（0 表示不販售整套）<input className={field} type="number" min={0} value={edit.setPrice} onChange={(e) => setEdit({ ...edit, setPrice: Math.max(0, +e.target.value) })} /></label>
       <section className="space-y-2 border-y border-border py-3"><p className="flex items-center gap-1 text-sm font-bold"><Gift className="h-4 w-4 text-primary" />最後賞設定</p><label className="block text-xs">最後賞名稱（留白不啟用）<input className={field} value={edit.lastOneName ?? ''} onChange={(e) => setEdit({ ...edit, lastOneName: e.target.value })} /></label><div className="flex items-center gap-3">{edit.lastOneImage && <img src={edit.lastOneImage} alt="最後賞" className="h-16 w-16 rounded-lg object-contain" />}<ImageUpload label="上傳最後賞照片" flash={flash} onDone={(url) => setEdit((e) => e && { ...e, lastOneImage: url })} /></div><p className="text-xs text-muted-foreground">{edit.lastOneAwarded ? '此機台已發放最後賞；補庫存或儲存不會重複發放。新活動請建立新機台。' : '消耗最後庫存時贈送一份（含整套直購）。最後賞不計價、不計入可抽庫存，逾期失去資格，不再次發放。'}</p></section>
+      <section className="space-y-2 border-y border-border py-3"><label className="block text-xs">供貨方式<select className={field} value={edit.fulfillmentType ?? 'stock'} onChange={e => setEdit({ ...edit, fulfillmentType: e.target.value === 'preorder' ? 'preorder' : 'stock', dispatchDate: null })}><option value="stock">台灣現貨</option><option value="preorder">日本預購・回台後出貨</option></select></label>{edit.fulfillmentType === 'preorder' && <label className="block text-xs">預計回台出貨日期<input type="date" required className={field} value={edit.dispatchDate ?? ''} onChange={e => setEdit({ ...edit, dispatchDate: e.target.value })} /></label>}<p className="text-xs text-muted-foreground">含預購的整單依最晚日期寄出。只影響之後抽到的商品，既有倉庫與訂單保留原出貨時間；如有延誤請主動聯繫客人。</p></section>
       <input className={field} placeholder="狀態標籤" value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })} />
       <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-2">
         {edit.coverImage ? <img src={edit.coverImage} alt="" className="h-16 w-16 rounded-lg object-cover" /> : <div className="h-16 w-16 rounded-lg bg-muted" />}
@@ -542,7 +558,8 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
               return <Button variant="bare" size="bare" key={s} onClick={() => setOstat(s)} className={`rounded-full py-1.5 ${ostat === s ? (s === "全部" ? "bg-foreground text-background" : `st-${s}`) : "bg-muted text-muted-foreground"} ${ostat === s ? "ring-2 ring-ring/40" : ""}`}>{s}({n})</Button>;
             })}
           </div>
-          {(() => { const list = ostat === "全部" ? orders : orders.filter((o) => o.status === ostat); return list.length === 0 ? <Empty text={`沒有「${ostat}」訂單`} /> : list.map((o) => (
+          <label className="block text-xs">出貨類型<select className={field} value={fulfillmentFilter} onChange={e => setFulfillmentFilter(e.target.value)}><option value="all">全部供貨方式</option><option value="stock">純現貨單</option><option value="preorder">含預購單</option></select></label>
+          {(() => { const list = orders.filter(o => (ostat === "全部" || o.status === ostat) && (fulfillmentFilter === "all" || (fulfillmentFilter === "preorder" ? o.hasPreorder : !o.hasPreorder))); return list.length === 0 ? <Empty text={`沒有「${ostat}」訂單`} /> : list.map((o) => (
             <OrderCard key={o.id} o={o}>
               <div className="mt-3 flex flex-wrap gap-1">
                 {ORDER_STATUSES.map((s) => (
@@ -784,7 +801,7 @@ function SideMenu({ info, onClose, go }: { info: ShopInfo; onClose: () => void; 
           <p>⚠️ 本店不會主動要求您轉帳、提供信用卡或 ATM 操作，如遇可疑訊息請透過官方 LINE 確認。</p>
           <p>隨機商品可能重複，請確認款式再抽；瑕疵、錯寄與依法享有的權利不因隨機商品而排除，請聯繫店長處理。</p>
         </Sec>
-        <Sec id="faq" icon={MessageCircle} title="常見問題與商品包裝"><p className="font-bold text-foreground">不想抽到重複怎麼辦？</p><p>可選擇整套直購，每款各一顆。隨機抽獎仍可能連續抽中相同款式。</p><p className="font-bold text-foreground">會附蛋紙嗎？</p><p>附日本原廠蛋紙。若收到商品有瑕疵或款式不符，請保留包裝並聯繫店長。</p><p className="font-bold text-foreground">換手機後還找得到倉庫嗎？</p><p>目前倉庫記錄在此瀏覽器，請勿清除資料或更換瀏覽器；出貨前確認全部商品。</p><p className="font-bold text-foreground">可以在超商拆箱再付款嗎？</p><p>超商通常須先付款取件，並非付款前開箱驗貨。異常商品請向本店反映。</p></Sec>
+        <Sec id="faq" icon={MessageCircle} title="常見問題與商品包裝"><p className="font-bold text-foreground">不想抽到重複怎麼辦？</p><p>可選擇整套直購，每款各一顆。隨機抽獎仍可能連續抽中相同款式。</p><p className="font-bold text-foreground">會附蛋紙嗎？</p><p>附日本原廠蛋紙。若收到商品有瑕疵或款式不符，請保留包裝並聯繫店長。</p><p className="font-bold text-foreground">換手機後還找得到倉庫嗎？</p><p>新抽扭蛋保存在會員倉庫，換手機登入同一會員即可查看；既有訪客商品不會自動移入會員倉庫。</p><p className="font-bold text-foreground">可以在超商拆箱再付款嗎？</p><p>超商通常須先付款取件，並非付款前開箱驗貨。異常商品請向本店反映。</p></Sec>
         <div className="grid grid-cols-2 gap-2">
           {info.lineUrl && <a href={info.lineUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 rounded-full bg-secondary py-2.5 text-sm font-bold text-secondary-foreground"><MessageCircle className="h-4 w-4" />LINE 客服</a>}
           {info.igUrl && <a href={info.igUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 rounded-full bg-accent py-2.5 text-sm font-bold text-accent-foreground"><Instagram className="h-4 w-4" />Instagram</a>}
