@@ -1,5 +1,6 @@
 import type { VaultItem } from '@/lib/gacha.functions';
 import { groupVaultItems } from '@/lib/vault-groups';
+import { FulfillmentBadge } from './fulfillment';
 
 export function VaultPrizes({ items }: { items: VaultItem[] }) {
   return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -9,6 +10,7 @@ export function VaultPrizes({ items }: { items: VaultItem[] }) {
         <span aria-label={`數量 ${quantity} 顆`} className="absolute right-2 top-2 flex h-7 min-w-9 items-center justify-center rounded-full border border-border bg-accent px-2 text-sm font-bold tabular-nums text-accent-foreground">×{quantity}</span>
         <div className="space-y-1 p-2">
           <p className="break-words text-xs font-bold leading-relaxed">{item.name}</p>
+          <FulfillmentBadge item={item} />
           <p className="text-[11px] text-muted-foreground">{item.isLastOne ? '🎊 最後賞贈品' : `NT$${item.price}／顆`}</p>
         </div>
       </div>

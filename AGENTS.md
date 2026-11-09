@@ -29,3 +29,5 @@
 - Keep collectible numbering stable and resolve each card to its own bundled illustration; catalog changes must preserve existing owned card numbers.
 - Keep first-visit guidance browser-safe and checkout acknowledgements local to presentation; never replace authoritative stock, price or shipping validation with UI checks.
 - Group repeated vault prizes only in browser presentation using prize identity and stored snapshots; retain individual reservations for totals, expiry and checkout.
+- Snapshot fulfillment on vault insertion inside the stock transaction and persist checkout's latest preorder date in orders; machine edits must not silently rewrite existing purchase schedules.
+- Keep preorder consent validated against the locked vault schedule in checkout RPC; display acknowledgements cannot replace authoritative transaction validation.
