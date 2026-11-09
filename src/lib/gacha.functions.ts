@@ -4,6 +4,7 @@ import { VAULT_MS } from "@/lib/shipping";
 import { emptySeller, type Seller } from "@/lib/export711";
 import { validateMachineOrder } from '@/lib/machine-order';
 import { rollCards } from '@/lib/cat-cards';
+import { validDispatchDate, type Fulfillment } from '@/lib/fulfillment';
 
 async function optionalMember(db: Awaited<ReturnType<typeof admin>>) {
   const bearer = getRequestHeader('authorization');
@@ -15,10 +16,10 @@ async function optionalMember(db: Awaited<ReturnType<typeof admin>>) {
 }
 
 export type Item = { id: string; name: string; image: string; stock: number };
-export type Machine = { id: string; title: string; price: number; totalStock: number; setPrice: number; coverImage: string; status: string; items: Item[]; lastOneName?: string; lastOneImage?: string; lastOneAwarded?: boolean };
-export type VaultItem = { vaultId: string; id: string; name: string; image: string; machineTitle: string; drawnAt: string; price: number; isLastOne?: boolean };
+export type Machine = Fulfillment & { id: string; title: string; price: number; totalStock: number; setPrice: number; coverImage: string; status: string; items: Item[]; lastOneName?: string; lastOneImage?: string; lastOneAwarded?: boolean };
+export type VaultItem = Fulfillment & { vaultId: string; id: string; name: string; image: string; machineTitle: string; drawnAt: string; price: number; isLastOne?: boolean };
 export type Shipping = { name: string; phone: string; email: string; storeName: string; storeCode: string };
-export type Order = { id: string; items: VaultItem[]; shipping: Shipping; total: number; fee: number; count: number; createdAt: string; status: string; discount?: number; couponName?: string };
+export type Order = { id: string; items: VaultItem[]; shipping: Shipping; total: number; fee: number; count: number; createdAt: string; status: string; discount?: number; couponName?: string; hasPreorder?: boolean; dispatchDate?: string | null };
 
 const admin = () => import("@/integrations/supabase/client.server").then((m) => m.supabaseAdmin);
 const dev = (d: unknown) => String(d ?? "").slice(0, 80);
@@ -39,12 +40,12 @@ export const listMachines = createServerFn({ method: "GET" }).handler(async () =
   ]);
   return (p ?? []).map((m): Machine => {
     const items = (z ?? []).filter((x) => x.product_id === m.id).map((x) => ({ id: x.id, name: x.name, image: x.image, stock: x.stock }));
-    return { id: m.id, title: m.title, price: m.price, setPrice: m.set_price ?? 0, coverImage: m.cover_image, status: m.status, items, totalStock: items.reduce((a, i) => a + i.stock, 0), lastOneName: m.last_one_name, lastOneImage: m.last_one_image, lastOneAwarded: m.last_one_awarded };
+    return { id: m.id, title: m.title, price: m.price, setPrice: m.set_price ?? 0, coverImage: m.cover_image, status: m.status, items, totalStock: items.reduce((a, i) => a + i.stock, 0), lastOneName: m.last_one_name, lastOneImage: m.last_one_image, lastOneAwarded: m.last_one_awarded, fulfillmentType: m.fulfillment_type === 'preorder' ? 'preorder' : 'stock', dispatchDate: m.dispatch_date };
   });
 });
 
-type VRow = { id: string; prize_id: string; name: string; image: string; machine_title: string; price: number; drawn_at: string; is_last_one?: boolean };
-const toVault = (r: VRow): VaultItem => ({ vaultId: r.id, id: r.prize_id, name: r.name, image: r.image, machineTitle: r.machine_title, price: r.price, drawnAt: r.drawn_at, isLastOne: r.is_last_one ?? false });
+type VRow = { id: string; prize_id: string; name: string; image: string; machine_title: string; price: number; drawn_at: string; is_last_one?: boolean; fulfillment_type?: string; dispatch_date?: string | null };
+const toVault = (r: VRow): VaultItem => ({ vaultId: r.id, id: r.prize_id, name: r.name, image: r.image, machineTitle: r.machine_title, price: r.price, drawnAt: r.drawn_at, isLastOne: r.is_last_one ?? false, fulfillmentType: r.fulfillment_type === 'preorder' ? 'preorder' : 'stock', dispatchDate: r.dispatch_date ?? null });
 
 /** Releases (returns to machine stock) unordered vault items older than the free storage period. */
 async function purgeExpired(db: Awaited<ReturnType<typeof admin>>, deviceId?: string) {
@@ -94,7 +95,7 @@ export const buySet = createServerFn({ method: "POST" })
 
 /** Ships EVERY unexpired item in the device's vault as one order; partial picking is not allowed. */
 export const createOrder = createServerFn({ method: "POST" })
-  .validator((d: { deviceId: string; shipping: Shipping; agreed: boolean; couponId?: string }) => d)
+  .validator((d: { deviceId: string; shipping: Shipping; agreed: boolean; couponId?: string; preorderAgreed?: boolean; dispatchDate?: string | null }) => d)
   .handler(async ({ data }) => {
     const s = data.shipping;
     const deviceId = dev(data.deviceId);
@@ -104,14 +105,15 @@ export const createOrder = createServerFn({ method: "POST" })
     const userId = await optionalMember(db);
     if (!userId) throw new Error('請先登入會員結帳');
     const owner = `member:${userId}`;
-    const {data:result,error}=await db.rpc('checkout_vault',{_device:owner,_shipping:s,_user:userId,...(data.couponId?{_coupon:data.couponId}: {})});
+    const {data:result,error}=await db.rpc('checkout_vault',{_device:owner,_shipping:{ ...s, preorderAgreed: data.preorderAgreed === true, dispatchDate: data.dispatchDate ?? '' },_user:userId,...(data.couponId?{_coupon:data.couponId}: {})});
     if(error)throw new Error(error.message);
     return result as {id:string;total:number;discount:number};
   });
 
-type ORow = { id: string; items: unknown; ship_name: string; ship_phone: string; ship_email: string; store_name: string; store_code: string; total: number; shipping_fee: number; item_count: number; created_at: string; status: string; discount?: number; coupon_name?: string };
+type ORow = { id: string; items: unknown; ship_name: string; ship_phone: string; ship_email: string; store_name: string; store_code: string; total: number; shipping_fee: number; item_count: number; created_at: string; status: string; discount?: number; coupon_name?: string; has_preorder?: boolean; dispatch_date?: string | null };
 const toOrder = (o: ORow): Order => ({
   id: o.id, items: o.items as VaultItem[], total: o.total, fee: o.shipping_fee, count: o.item_count || (o.items as unknown[]).length, status: o.status, discount:o.discount??0,couponName:o.coupon_name??'',
+  hasPreorder: o.has_preorder ?? false, dispatchDate: o.dispatch_date ?? null,
   createdAt: new Date(o.created_at).toLocaleString("zh-TW", { timeZone: "Asia/Taipei" }),
   shipping: { name: o.ship_name, phone: o.ship_phone, email: o.ship_email, storeName: o.store_name, storeCode: o.store_code },
 });
@@ -151,7 +153,10 @@ export const adminSaveMachine = createServerFn({ method: "POST" })
     const db = await admin();
     const items = m.items.map((it) => ({ ...it, stock: Math.max(0, Math.floor(Number(it.stock) || 0)) }));
     const total = items.reduce((a, i) => a + i.stock, 0);
-    const { error } = await db.from("products").upsert({ id: m.id, title: m.title, price: m.price, total_stock: total, set_price: Math.max(0, Math.floor(Number(m.setPrice) || 0)), cover_image: m.coverImage, status: m.status, last_one_name: String(m.lastOneName ?? '').trim().slice(0, 120), last_one_image: String(m.lastOneImage ?? '').slice(0, 2000) });
+    const fulfillment = m.fulfillmentType === 'preorder' ? 'preorder' : 'stock';
+    const dispatchDate = fulfillment === 'preorder' ? String(m.dispatchDate ?? '') : null;
+    if (fulfillment === 'preorder' && (!dispatchDate || !validDispatchDate(dispatchDate))) throw new Error('請設定有效預計出貨日期');
+    const { error } = await db.from("products").upsert({ id: m.id, title: m.title, price: m.price, total_stock: total, set_price: Math.max(0, Math.floor(Number(m.setPrice) || 0)), cover_image: m.coverImage, status: m.status, last_one_name: String(m.lastOneName ?? '').trim().slice(0, 120), last_one_image: String(m.lastOneImage ?? '').slice(0, 2000), fulfillment_type: fulfillment, dispatch_date: dispatchDate });
     if (error) throw new Error(error.message);
     await db.from("prizes").delete().eq("product_id", m.id);
     if (items.length) await db.from("prizes").insert(items.map((it, i) => ({ id: it.id, product_id: m.id, name: it.name, image: it.image, stock: it.stock, sort: i })));
