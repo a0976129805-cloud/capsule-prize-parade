@@ -216,6 +216,8 @@ export type Database = {
           created_at: string
           device_id: string
           discount: number
+          dispatch_date: string | null
+          has_preorder: boolean
           id: string
           item_count: number
           items: Json
@@ -234,6 +236,8 @@ export type Database = {
           created_at?: string
           device_id: string
           discount?: number
+          dispatch_date?: string | null
+          has_preorder?: boolean
           id: string
           item_count?: number
           items?: Json
@@ -252,6 +256,8 @@ export type Database = {
           created_at?: string
           device_id?: string
           discount?: number
+          dispatch_date?: string | null
+          has_preorder?: boolean
           id?: string
           item_count?: number
           items?: Json
@@ -305,6 +311,8 @@ export type Database = {
         Row: {
           cover_image: string
           created_at: string
+          dispatch_date: string | null
+          fulfillment_type: string
           id: string
           last_one_awarded: boolean
           last_one_image: string
@@ -319,6 +327,8 @@ export type Database = {
         Insert: {
           cover_image?: string
           created_at?: string
+          dispatch_date?: string | null
+          fulfillment_type?: string
           id: string
           last_one_awarded?: boolean
           last_one_image?: string
@@ -333,6 +343,8 @@ export type Database = {
         Update: {
           cover_image?: string
           created_at?: string
+          dispatch_date?: string | null
+          fulfillment_type?: string
           id?: string
           last_one_awarded?: boolean
           last_one_image?: string
@@ -400,7 +412,9 @@ export type Database = {
       vault_items: {
         Row: {
           device_id: string
+          dispatch_date: string | null
           drawn_at: string
+          fulfillment_type: string
           id: string
           image: string
           is_last_one: boolean
@@ -415,7 +429,9 @@ export type Database = {
         }
         Insert: {
           device_id: string
+          dispatch_date?: string | null
           drawn_at?: string
+          fulfillment_type?: string
           id?: string
           image?: string
           is_last_one?: boolean
@@ -430,7 +446,9 @@ export type Database = {
         }
         Update: {
           device_id?: string
+          dispatch_date?: string | null
           drawn_at?: string
+          fulfillment_type?: string
           id?: string
           image?: string
           is_last_one?: boolean
@@ -462,7 +480,9 @@ export type Database = {
         Args: { _device: string; _product: string }
         Returns: {
           device_id: string
+          dispatch_date: string | null
           drawn_at: string
+          fulfillment_type: string
           id: string
           image: string
           is_last_one: boolean
@@ -486,7 +506,9 @@ export type Database = {
         Args: { _device: string; _product: string }
         Returns: {
           device_id: string
+          dispatch_date: string | null
           drawn_at: string
+          fulfillment_type: string
           id: string
           image: string
           is_last_one: boolean
@@ -527,7 +549,9 @@ export type Database = {
         Args: { _device: string; _n: number; _product: string }
         Returns: {
           device_id: string
+          dispatch_date: string | null
           drawn_at: string
+          fulfillment_type: string
           id: string
           image: string
           is_last_one: boolean
@@ -569,7 +593,9 @@ export type Database = {
         }
         Returns: {
           device_id: string
+          dispatch_date: string | null
           drawn_at: string
+          fulfillment_type: string
           id: string
           image: string
           is_last_one: boolean
