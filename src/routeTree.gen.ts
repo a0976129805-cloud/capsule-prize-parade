@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CouponsRouteImport } from './routes/coupons'
+import { Route as GroupBuysRouteImport } from './routes/group-buys'
+import { Route as MachinesRouteImport } from './routes/machines'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as SetsRouteImport } from './routes/sets'
 import { Route as VaultRouteImport } from './routes/vault'
@@ -30,6 +32,16 @@ const AuthRoute = AuthRouteImport.update({
 const CouponsRoute = CouponsRouteImport.update({
   id: '/coupons',
   path: '/coupons',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GroupBuysRoute = GroupBuysRouteImport.update({
+  id: '/group-buys',
+  path: '/group-buys',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MachinesRoute = MachinesRouteImport.update({
+  id: '/machines',
+  path: '/machines',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrdersRoute = OrdersRouteImport.update({
@@ -57,6 +69,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/coupons': typeof CouponsRoute
+  '/group-buys': typeof GroupBuysRoute
+  '/machines': typeof MachinesRoute
   '/orders': typeof OrdersRoute
   '/sets': typeof SetsRoute
   '/vault': typeof VaultRoute
@@ -66,6 +80,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/coupons': typeof CouponsRoute
+  '/group-buys': typeof GroupBuysRoute
+  '/machines': typeof MachinesRoute
   '/orders': typeof OrdersRoute
   '/sets': typeof SetsRoute
   '/vault': typeof VaultRoute
@@ -76,6 +92,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/coupons': typeof CouponsRoute
+  '/group-buys': typeof GroupBuysRoute
+  '/machines': typeof MachinesRoute
   '/orders': typeof OrdersRoute
   '/sets': typeof SetsRoute
   '/vault': typeof VaultRoute
@@ -87,6 +105,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/coupons'
+    | '/group-buys'
+    | '/machines'
     | '/orders'
     | '/sets'
     | '/vault'
@@ -96,6 +116,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/coupons'
+    | '/group-buys'
+    | '/machines'
     | '/orders'
     | '/sets'
     | '/vault'
@@ -105,6 +127,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/coupons'
+    | '/group-buys'
+    | '/machines'
     | '/orders'
     | '/sets'
     | '/vault'
@@ -115,6 +139,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   CouponsRoute: typeof CouponsRoute
+  GroupBuysRoute: typeof GroupBuysRoute
+  MachinesRoute: typeof MachinesRoute
   OrdersRoute: typeof OrdersRoute
   SetsRoute: typeof SetsRoute
   VaultRoute: typeof VaultRoute
@@ -142,6 +168,20 @@ declare module '@tanstack/react-router' {
       path: '/coupons'
       fullPath: '/coupons'
       preLoaderRoute: typeof CouponsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/group-buys': {
+      id: '/group-buys'
+      path: '/group-buys'
+      fullPath: '/group-buys'
+      preLoaderRoute: typeof GroupBuysRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/machines': {
+      id: '/machines'
+      path: '/machines'
+      fullPath: '/machines'
+      preLoaderRoute: typeof MachinesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/orders': {
@@ -179,6 +219,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   CouponsRoute: CouponsRoute,
+  GroupBuysRoute: GroupBuysRoute,
+  MachinesRoute: MachinesRoute,
   OrdersRoute: OrdersRoute,
   SetsRoute: SetsRoute,
   VaultRoute: VaultRoute,

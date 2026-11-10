@@ -36,7 +36,7 @@ export const toggleGroupJoin = createServerFn({ method: 'POST' }).middleware([re
   });
 
 export const adminSaveGroupBuy = createServerFn({ method: 'POST' })
-  .inputValidator((d: Omit<GroupBuy, 'joined'> & { id?: string }) => d)
+  .inputValidator((d: Omit<GroupBuy, 'joined' | 'id'> & { id?: string }) => d)
   .handler(async ({ data }) => {
     await owner();
     const row = { title: String(data.title).trim().slice(0, 120), image: /^\/api\/public\/img\/[\w.-]+$/.test(data.image) ? data.image : '', set_price: Math.max(0, Math.round(+data.setPrice || 0)), style_count: Math.max(1, Math.round(+data.styleCount || 1)), eta: String(data.eta ?? '').slice(0, 40), target: Math.max(1, Math.round(+data.target || 1)), status: ['open', 'success', 'closed'].includes(data.status) ? data.status : 'open', sort: Math.round(+data.sort || 0) };
