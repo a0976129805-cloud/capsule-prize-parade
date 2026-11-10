@@ -37,6 +37,7 @@ import { useMember } from '@/components/boutique/member-session';
 import { getMemberContact } from '@/lib/member-contact.functions';
 import { bestCoupon, couponDiscount, usableCoupon } from '@/lib/rewards';
 import catLogo from "@/assets/cat-logo.png";
+import { GroupBuyBadge, GroupBuyBoard, GroupBuyAdmin } from "@/components/boutique/group-buy";
 import { CatAlbum, albumQueryKey } from "@/components/boutique/cat-album";
 import { cardLabel } from "@/lib/cat-cards";
 import { useQueryClient } from "@tanstack/react-query";
@@ -61,7 +62,7 @@ export const Route = createFileRoute("/")({
 
 const ORDER_STATUSES = ["待出貨", "已出貨", "已取貨", "已取消"];
 const emptyShip: Shipping = { name: "", phone: "", email: "", storeName: "", storeCode: "" };
-const RULES = `倉庫商品免費暫存 ${VAULT_HOURS} 小時，申請出貨時須將倉內所有扭蛋一併結帳寄出，無法單獨挑選放棄。逾期未結帳的商品將自動釋回機台。訂單成立後依現貨／預購時程寄出，不受暫存期限影響。`;
+const RULES = `倉庫商品免費暫存 ${VAULT_HOURS} 小時，申請出貨時須將倉內所有扭蛋一併結帳寄出，無法單獨挑選放棄。逾期未結帳的商品將自動釋回機台。為減少體積與破損，預設不附外層塑膠蛋殼，保留全新未拆內袋與原廠蛋紙（蛋殼本身即商品之款式除外）。訂單成立後依現貨／預購時程寄出，不受暫存期限影響。`;
 
 function getDeviceId() {
   let id = localStorage.getItem("gacha-device");
@@ -69,15 +70,15 @@ function getDeviceId() {
   return id;
 }
 
-export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vault" | "orders" | "sets" | "coupons" }) {
+export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "machines" | "groups" | "vault" | "orders" | "sets" | "coupons" }) {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"home" | "vault" | "orders" | "admin" | "sets" | "coupons">(initialTab);
+  const [tab, setTab] = useState<"home" | "machines" | "groups" | "vault" | "orders" | "admin" | "sets" | "coupons">(initialTab);
   const member = useMember();
   const wallet = useWallet();
   const [couponChoice,setCouponChoice]=useState('auto');
-  const go = (next: 'home' | 'vault' | 'orders' | 'sets' | 'admin' | 'coupons') => {
+  const go = (next: 'home' | 'machines' | 'groups' | 'vault' | 'orders' | 'sets' | 'admin' | 'coupons') => {
     setSelectedId(null); setTab(next);
-    if (next !== 'admin') navigate({ to: next === 'home' ? '/' : next === 'sets' ? '/sets' : next === 'vault' ? '/vault' : next === 'coupons' ? '/coupons' : '/orders' });
+    if (next !== 'admin') navigate({ to: next === 'home' ? '/' : next === 'machines' ? '/machines' : next === 'groups' ? '/group-buys' : next === 'sets' ? '/sets' : next === 'vault' ? '/vault' : next === 'coupons' ? '/coupons' : '/orders' });
   };
   const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -114,6 +115,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
   const [deviceId, setDeviceId] = useState<string | null>(null);
   useEffect(() => { setDeviceId(getDeviceId()); }, []);
   const [tag, setTag] = useState<"all" | "low" | "lastone" | "plenty">("all");
+  const [query, setQuery] = useState("");
   const qc = useQueryClient();
   const refreshAlbum = () => { void qc.invalidateQueries({ queryKey: ['album'] }); };
   const [shareItems, setShareItems] = useState<VaultItem[] | null>(null);
@@ -267,18 +269,23 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-4">
-        {tab === "home" && !selected && (
+        {(tab === "home" || tab === "machines") && !selected && (
           <div className="space-y-4">
+            {tab === "home" ? <>
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
             <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
             <DrawFeed machines={machines} />
-            <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のガチャ</p><h2 className="text-lg font-bold">今天，轉點小幸福</h2></div><AlbumProgress deviceId={deviceId} onOpen={() => setAlbumOpen(true)} /></div>
-            {machines.length > 0 && <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label="機台分類">{([["all", "全部"], ["low", "🔥 即將完售"], ["lastone", "🎁 最後賞告急"], ["plenty", "✨ 庫存充足"]] as const).map(([k, l]) => <Button key={k} role="tab" aria-selected={tag === k} size="sm" variant={tag === k ? "default" : "outline"} className="shrink-0 rounded-full" onClick={() => setTag(k)}>{l}</Button>)}</div>}
+            <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のおすすめ</p><h2 className="text-lg font-bold">店長精選</h2></div><AlbumProgress deviceId={deviceId} onOpen={() => setAlbumOpen(true)} /></div>
+            </> : <>
+            <div className="border-b border-border pb-3"><p className="text-xs text-secondary-foreground">ガチャ売り場</p><h1 className="mt-1 text-2xl font-bold">全部扭蛋機</h1></div>
+            <label className="relative block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜尋機台名稱" aria-label="搜尋機台" className="w-full rounded-full border border-input bg-card py-2.5 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring" /></label>
+            {machines.length > 0 && <div className="sticky top-[76px] z-20 -mx-4 flex gap-2 overflow-x-auto bg-background/95 px-4 py-1.5" role="tablist" aria-label="機台分類">{([["all", "全部"], ["low", "即將完售"], ["lastone", "最後賞告急"], ["plenty", "庫存充足"], ["sets", "可整套"]] as const).map(([k, l]) => <Button key={k} role="tab" aria-selected={k === "sets" ? false : tag === k} size="sm" variant={k !== "sets" && tag === k ? "default" : "outline"} className="shrink-0 rounded-full" onClick={() => k === "sets" ? go('sets') : setTag(k)}>{l}</Button>)}</div>}
+            </>}
             {loading && <div className="py-8 text-center" role="status"><div className="cat-loader"><img src={catLogo} alt="" className="cat-loader-cat" /><span className="cat-loader-ball" /></div><p className="mt-2 text-sm text-muted-foreground">奶油貓正在搬機台…</p></div>}
             {loadError && <Button variant="outline" className="w-full" onClick={reloadMachines}>讀取失敗・重新載入</Button>}
             {!loading && !loadError && machines.length === 0 && <Empty text="店長正在準備新機台" />}
             <div className="grid grid-cols-2 gap-3">
-            {machines.filter((m) => tag === "all" || (tag === "low" && m.totalStock > 0 && m.totalStock <= 5) || (tag === "lastone" && !!m.lastOneName && !m.lastOneAwarded && m.totalStock > 0 && m.totalStock <= 10) || (tag === "plenty" && m.totalStock > 10)).map((m) => (
+            {(tab === "home" ? machines.filter((m) => m.totalStock > 0).slice(0, 8) : machines.filter((m) => (tag === "all" || (tag === "low" && m.totalStock > 0 && m.totalStock <= 5) || (tag === "lastone" && !!m.lastOneName && !m.lastOneAwarded && m.totalStock > 0 && m.totalStock <= 10) || (tag === "plenty" && m.totalStock > 10)) && m.title.toLowerCase().includes(query.trim().toLowerCase()))).map((m) => (
               <Button variant="bare" size="bare" key={m.id} onClick={() => setSelectedId(m.id)} className="flex min-w-0 flex-col items-stretch overflow-hidden whitespace-normal rounded-lg border border-border bg-card text-left shadow-sm transition active:scale-[.97]">
                 <div className="relative aspect-square bg-muted">
                   <img src={m.coverImage} alt={m.title} loading="lazy" className="h-full w-full object-cover" />
@@ -293,7 +300,9 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
               </Button>
             ))}
             </div>
-            <StorefrontFaq lineUrl={info.lineUrl} contactEmail={info.contactEmail} />
+            {tab === "machines" && !loading && machines.length > 0 && query && !machines.some((m) => m.title.toLowerCase().includes(query.trim().toLowerCase())) && <Empty text="找不到符合的機台" />}
+            {tab === "home" && machines.length > 0 && <Button variant="outline" className="h-12 w-full rounded-full font-bold" onClick={() => go('machines')}>逛逛全部扭蛋機（{machines.length} 台）→</Button>}
+            {tab === "home" && <StorefrontFaq lineUrl={info.lineUrl} contactEmail={info.contactEmail} />}
           </div>
         )}
 
@@ -307,7 +316,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
           {!machines.some((m) => m.setPrice > 0) && <Empty text="整套商品準備中，敬請期待" />}
         </div>}
 
-        {tab === "home" && selected && (
+        {(tab === "home" || tab === "machines") && selected && (
           <div className="space-y-4">
             <Button variant="bare" size="bare" onClick={() => setSelectedId(null)} className="flex items-center gap-1 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" /> 返回列表</Button>
             <div className="overflow-hidden rounded-lg border border-border bg-card">
@@ -405,22 +414,24 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "vau
         )}
 
         {tab === "coupons" && <RewardWallet />}
+        {tab === "groups" && <GroupBuyBoard igUrl={info.igUrl} flash={flash} />}
         {tab === "admin" && <AdminGate><Admin machines={machines} reload={reloadMachines} flash={flash} /></AdminGate>}
       </main>
 
       <footer className="mx-auto mb-4 max-w-2xl border-t border-border px-4 pt-5 text-center text-xs leading-relaxed text-muted-foreground"><p className="font-bold text-foreground">奶油貓・日本線上扭蛋屋</p><p className="mt-1">日本正版扭蛋・7-11 賣貨便到店付款</p><p>不要求 ATM 操作或提前匯款；遇到疑問請先聯繫店長。</p>{info.lineUrl && <a className="mt-2 inline-flex items-center gap-1 text-secondary-foreground" href={info.lineUrl} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" />LINE 客服</a>}{info.serviceHours && <p>{info.serviceHours}</p>}</footer>
       <nav aria-label="底部導覽" className="boutique-dock fixed inset-x-3 bottom-3 z-30 mx-auto max-w-md rounded-2xl border border-border">
         <div className="grid grid-cols-4">
-          {([["home", "扭蛋機台"], ["sets", "整套專區"], ["vault", "我的倉庫"], ["orders", "訂單進度"]] as const).map(([k, l]) => (
+          {([["home", "首頁"], ["machines", "扭蛋機台"], ["vault", "我的倉庫"], ["orders", "訂單進度"]] as const).map(([k, l]) => (
             <Button variant="bare" size="bare" key={k} onClick={() => go(k)} aria-current={tab === k ? "page" : undefined}
               className={`dock-item relative h-16 flex-col gap-1 rounded-xl text-[11px] ${tab === k ? "text-primary dock-active" : "text-muted-foreground"}`}>
-              <DockIcon kind={k} />{l}
+              <DockIcon kind={k === "machines" ? "sets" : k} />{l}
               {k === "vault" && vault.length > 0 && <span className="absolute right-[27%] top-1 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{vault.length}</span>}
             </Button>
           ))}
         </div>
       </nav>
 
+      {tab !== "groups" && tab !== "admin" && !selected && <GroupBuyBadge />}
       {menu && <SideMenu info={info} onClose={() => setMenu(false)} go={(t) => { go(t); setMenu(false); }} />}
 
       {setMachine && <SetPopup machine={setMachine} busy={buying} onBuy={purchaseSet} onClose={() => setSetMachine(null)} />}
@@ -460,7 +471,7 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
 }
 
 function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () => Promise<void>; flash: (m: string) => void }) {
-  const [view, setView] = useState<"machines" | "orders" | "seller" | "shop" | "rewards">("machines");
+  const [view, setView] = useState<"machines" | "groups" | "orders" | "seller" | "shop" | "rewards">("machines");
   const [edit, setEdit] = useState<Machine | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [ostat, setOstat] = useState("待出貨");
@@ -532,14 +543,14 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-5 rounded-full bg-muted p-1 text-xs font-bold">
-        {(["machines", "orders", "seller", "shop", "rewards"] as const).map((v) => (
+      <div className="grid grid-cols-6 rounded-full bg-muted p-1 text-[11px] font-bold">
+        {(["machines", "groups", "orders", "seller", "shop", "rewards"] as const).map((v) => (
           <Button variant="bare" size="bare" key={v} onClick={() => setView(v)} className={`rounded-full py-2 ${view === v ? "bg-card text-primary shadow" : "text-muted-foreground"}`}>
-            {v === "machines" ? "扭蛋機" : v === "orders" ? `訂單` : v === "seller" ? "賣家設定" : v==='rewards'?'會員優惠':"商店公告"}
+            {v === "machines" ? "扭蛋機" : v === "groups" ? "開團" : v === "orders" ? `訂單` : v === "seller" ? "賣家設定" : v==='rewards'?'會員優惠':"商店公告"}
           </Button>
         ))}
       </div>
-      {view === 'rewards' ? <RewardSettingsForm flash={flash}/> : view === "shop" ? <ShopInfoForm flash={flash} /> : view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
+      {view === 'groups' ? <GroupBuyAdmin flash={flash} upload={(onDone) => <ImageUpload label="上傳開團圖片" flash={flash} onDone={onDone} />} /> : view === 'rewards' ? <RewardSettingsForm flash={flash}/> : view === "shop" ? <ShopInfoForm flash={flash} /> : view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
         <>
           <Button variant="bare" size="bare" onClick={() => setEdit({ id: "m" + Date.now(), title: "", price: 100, totalStock: 0, setPrice: 0, coverImage: "", status: "熱烈販售中", items: [] })}
             className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Plus className="h-4 w-4" /> 新增扭蛋機</Button>
