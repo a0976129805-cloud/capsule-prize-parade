@@ -21,7 +21,7 @@ export function OfficialStoreLookup() {
 
 export function StorefrontFaq({ lineUrl = '', contactEmail = '' }: { lineUrl?: string; contactEmail?: string }) {
   const questions = [
-    { key: 'genuine', title: '是日本正版嗎？會附蛋紙嗎？', answer: '本店販售日本正版扭蛋，附日本原廠蛋紙。收到瑕疵或款式不符的商品，請保留包裝並聯繫店長。' },
+    { key: 'genuine', title: '是日本正版嗎？有附蛋殼、蛋紙嗎？', answer: '本店販售日本正版扭蛋，附日本原廠蛋紙，商品保留全新未拆內袋。為減少體積與運送破損，預設不附外層塑膠蛋殼（蛋殼本身即商品的款式除外）。收到瑕疵或款式不符的商品，請保留包裝並聯繫店長。' },
     { key: 'one', title: '只抽一顆也能寄嗎？', answer: `可以！商品金額未滿 NT$${FREE_SHIP_AMOUNT.toLocaleString()}，運費 NT$${SHIP_FEE}；滿額免運。倉庫內所有商品須一起結帳寄出，請在 ${VAULT_HOURS} 小時內申請出貨。` },
     { key: 'dispatch', title: '現貨、預購何時出貨？', answer: '機台會標示現貨或預購與預計出貨日期。含預購的整筆訂單依最晚預購日期，待店長回台後統一寄出，不分批。24 小時是整倉結帳期限，成立訂單後不受此期限影響；現貨實際寄出時間請向店長確認。' },
     { key: 'random', title: '會抽到重複嗎？貓咪卡何時入冊？', answer: '扭蛋與貓咪卡都可能重複。附贈卡片先顯示待結帳，整倉送出訂單後才正式入冊；逾期未結帳的卡片會作廢。' },
