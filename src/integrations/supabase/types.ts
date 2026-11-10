@@ -113,6 +113,74 @@ export type Database = {
         }
         Relationships: []
       }
+      group_buy_joins: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_buy_joins_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "group_buys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_buys: {
+        Row: {
+          created_at: string
+          eta: string
+          id: string
+          image: string
+          set_price: number
+          sort: number
+          status: string
+          style_count: number
+          target: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          eta?: string
+          id?: string
+          image?: string
+          set_price?: number
+          sort?: number
+          status?: string
+          style_count?: number
+          target?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          eta?: string
+          id?: string
+          image?: string
+          set_price?: number
+          sort?: number
+          status?: string
+          style_count?: number
+          target?: number
+          title?: string
+        }
+        Relationships: []
+      }
       member_album_claims: {
         Row: {
           created_at: string
