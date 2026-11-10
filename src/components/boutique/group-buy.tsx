@@ -47,7 +47,7 @@ export function GroupBuyBoard({ igUrl, flash }: { igUrl: string; flash: (m: stri
   </div>;
 }
 
-const blank: Omit<GroupBuy, 'joined'> & { id?: string } = { title: '', image: '', setPrice: 0, styleCount: 5, eta: '', target: 5, status: 'open', sort: 0 };
+const blank: Omit<GroupBuy, 'joined' | 'id'> & { id?: string } = { title: '', image: '', setPrice: 0, styleCount: 5, eta: '', target: 5, status: 'open', sort: 0 };
 
 export function GroupBuyAdmin({ flash, upload }: { flash: (m: string) => void; upload: (onDone: (url: string) => void) => ReactNode }) {
   const fetchList = useServerFn(listGroupBuys); const save = useServerFn(adminSaveGroupBuy); const del = useServerFn(adminDeleteGroupBuy);

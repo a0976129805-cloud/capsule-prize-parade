@@ -460,7 +460,7 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
       <div className="flex flex-wrap justify-between gap-2"><span className="break-all font-bold">{o.id}</span><span className={`st-${o.status} rounded-full px-2.5 py-0.5 text-xs font-bold`}>{o.status}</span></div>
       <p className="text-xs text-muted-foreground">{o.createdAt}・總金額 NT${o.total}</p>
       {!!o.discount&&<p className="mt-1 text-xs text-secondary-foreground">{o.couponName}・已折抵 NT${o.discount}</p>}
-      <DispatchNotice items={o.hasPreorder ? [{ fulfillmentType: 'preorder', dispatchDate: o.dispatchDate }] : o.items} ordered />
+      <DispatchNotice items={o.hasPreorder ? [{ fulfillmentType: 'preorder', dispatchDate: o.dispatchDate ?? null }] : o.items} ordered />
       <ul className="mt-2 divide-y divide-border rounded-xl bg-muted/60 px-3">
         {groupItems(o.items).map((g) => <li key={g.name} className="flex justify-between gap-2 py-1.5"><span>{g.name}</span><span className="shrink-0 font-bold">- {g.qty} 顆</span></li>)}
       </ul>
@@ -774,7 +774,7 @@ function ShopInfoForm({ flash }: { flash: (m: string) => void }) {
   );
 }
 
-function SideMenu({ info, onClose, go }: { info: ShopInfo; onClose: () => void; go: (t: "home" | "vault" | "orders" | "admin" | "sets" | "coupons") => void }) {
+function SideMenu({ info, onClose, go }: { info: ShopInfo; onClose: () => void; go: (t: "home" | "machines" | "groups" | "vault" | "orders" | "admin" | "sets" | "coupons") => void }) {
   const member=useMember();const navigate=useNavigate();
   const [open, setOpen] = useState<string | null>("guide");
   const Sec = ({ id, icon: Icon, title, children }: { id: string; icon: typeof BookOpen; title: string; children: React.ReactNode }) => (
