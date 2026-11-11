@@ -14,7 +14,12 @@ export function GachaScene({ phase, skipped, onSkip, count = 1, sound, onSound }
     <Button variant="outline" className="mt-4 rounded-full" disabled={skipped} onClick={onSkip}><FastForward />跳過動畫</Button>
   </div>;
 }
+const DOCK_PATHS: Record<'home' | 'sets' | 'vault' | 'orders', string> = {
+  home: 'M3 11 12 4l9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5',
+  sets: 'M7 3h10v18H7zM7 13h10M12 6.5a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4M10 17h4',
+  vault: 'M4 8h16v12H4zM3 5h18v3H3zM10 12h4',
+  orders: 'M2 6h11v10H2zM13 9h4l3 3v4h-7M6.5 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M16.5 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3',
+};
 export function DockIcon({ kind }: { kind: 'home' | 'sets' | 'vault' | 'orders' }) {
-  if (kind === 'sets') return <span aria-hidden="true" className="dock-art dock-sets"><i className="dock-set-bag" /><i className="dock-set-capsule" /><b className="dock-set-star">✦</b></span>;
-  return <span aria-hidden="true" className={`dock-art dock-${kind}`}>{kind === 'home' ? <><i className="dock-globe" /><i className="dock-base"><b /></i></> : kind === 'vault' ? <><i className="dock-box" /><i className="dock-cat">∧ ∧</i></> : <><i className="dock-parcel" /><i className="dock-truck" /><b className="dock-wheel one" /><b className="dock-wheel two" /></>}</span>;
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="dock-svg size-6" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d={DOCK_PATHS[kind]} /></svg>;
 }

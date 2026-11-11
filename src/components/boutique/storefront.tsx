@@ -53,6 +53,16 @@ export function ShippingProgress({ subtotal }: { subtotal: number }) {
   </section>;
 }
 
+const STAMP: Record<string, string> = {
+  cod: 'M5 9h14v10H5zM5 9l2-4h10l2 4M12 5v4M9 13h6',
+  genuine: 'M6 12a6 6 0 0 1 12 0zM6 12a6 6 0 0 0 12 0M9.5 8.5l1 1',
+  daily: 'M8 7h8l-1 13H9zM10 3l1 4M14 3l-1 4M10 12h4',
+  shipping: 'M2 7h11v9H2zM13 10h4l3 3v3h-7M6 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M16.5 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3',
+};
+function TrustStamp({ kind, hot }: { kind: string; hot?: boolean | undefined }) {
+  return <span className={`trust-stamp ${hot ? 'omikuji-ring' : ''}`}><svg aria-hidden="true" viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d={STAMP[kind]} /></svg></span>;
+}
+
 export function TrustStrip({ onDaily }: { onDaily?: () => void }) {
   const [topic, setTopic] = useState<TrustTopic | null>(null);
   const tiles: { key: string; label: string; img: string; click: () => void; hot?: boolean }[] = [
@@ -63,7 +73,7 @@ export function TrustStrip({ onDaily }: { onDaily?: () => void }) {
   ];
   return <><div className={`grid ${onDaily ? 'grid-cols-4' : 'grid-cols-3'} gap-1.5 border-y border-border py-2`}>
     {tiles.map((t) => <Button key={t.key} variant="bare" size="bare" onClick={t.click} className={`flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1 text-[10px] font-bold active:scale-95 transition-transform text-foreground`}>
-      <span className="relative"><img src={t.img} alt="" width={1024} height={768} loading="lazy" className={`aspect-square w-12 rounded-full object-cover ${t.hot ? 'omikuji-ring' : ''}`} />{t.hot && <span className="absolute -right-2 -top-1.5 rounded-full bg-primary px-1.5 py-px text-[9px] leading-tight text-primary-foreground shadow-sm">無料</span>}</span>
+      <span className="relative"><TrustStamp kind={t.key} hot={t.hot} />{t.hot && <span className="absolute -right-2 -top-1.5 rounded-full bg-primary px-1.5 py-px text-[9px] leading-tight text-primary-foreground shadow-sm">無料</span>}</span>
       <span className="truncate text-center leading-tight">{t.label}</span>
     </Button>)}
   </div><TrustInfoDialog topic={topic} onClose={() => setTopic(null)} /></>;

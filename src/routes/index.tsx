@@ -301,7 +301,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
             ))}
             </div>
             {tab === "machines" && !loading && machines.length > 0 && query && !machines.some((m) => m.title.toLowerCase().includes(query.trim().toLowerCase())) && <Empty text="找不到符合的機台" />}
-            {tab === "home" && machines.length > 0 && <Button variant="outline" className="h-12 w-full rounded-full font-bold" onClick={() => go('machines')}>逛逛全部扭蛋機（{machines.length} 台）→</Button>}
+            {tab === "home" && machines.length > 0 && <Button variant="outline" className="h-auto w-full flex-col gap-0.5 rounded-full border-primary/40 bg-card py-3 font-bold shadow-sm" onClick={() => go('machines')}><span>逛逛全部扭蛋機 →</span><span className="text-[11px] font-normal text-muted-foreground">日本直送・共 {machines.length} 台機台等你探索</span></Button>}
             {tab === "home" && <StorefrontFaq lineUrl={info.lineUrl} contactEmail={info.contactEmail} />}
           </div>
         )}
