@@ -347,7 +347,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
             {selected.setPrice > 0 && <Button variant="secondary" className="h-12 w-full rounded-full" onClick={() => setSetMachine(selected)}><ShoppingBag />全套直購・NT${selected.setPrice}</Button>}
             {selected.lastOneName && <section className="flex items-center gap-3 border-y border-border py-4" aria-label="機台最後賞"><Gift className="h-6 w-6 shrink-0 text-primary" />{selected.lastOneImage && <img src={selected.lastOneImage} alt={selected.lastOneName} className="h-16 w-16 rounded-lg object-contain" />}<div className="min-w-0"><p className="text-xs font-bold text-primary">ラストワン賞・最後賞</p><p className="break-words text-sm font-bold">{selected.lastOneName}</p><p className="mt-1 text-xs text-muted-foreground">{selected.lastOneAwarded ? '本機台最後賞已發放' : '抽走最後一顆（含整套直購），額外獲得此贈品。每機台限一次，須於 24 小時內整倉出貨。'}</p></div></section>}
             <div>
-              <p className="mb-2 font-bold">全款式一覽</p>
+              <p className="font-bold">全款式一覽</p><p className="mb-2 mt-0.5 text-[11px] text-muted-foreground">機率依目前剩餘顆數計算・日本正版，保留原廠內袋與蛋紙</p>
               <div className="grid grid-cols-3 gap-2">
                 {selected.items.map((it, index) => (
                   <Button variant="bare" size="bare" onClick={() => setGalleryIndex(index)} aria-label={`查看 ${it.name} 大圖`} key={it.id} className={`relative flex flex-col items-stretch overflow-hidden rounded-lg border border-border bg-card text-left ${it.stock <= 0 ? "opacity-50" : ""}`}>
@@ -355,7 +355,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
                     <span className="absolute right-1 top-1 rounded-full bg-card/90 p-1 text-muted-foreground"><ZoomIn className="h-3.5 w-3.5" /></span>
                     {it.stock <= 0 && <span className="absolute inset-x-0 top-1/3 bg-foreground/70 py-1 text-center text-xs font-bold text-background">已完售</span>}
                     <p className="whitespace-normal px-1.5 pt-1.5 text-xs">{it.name}</p>
-                    <p className={`px-1.5 pb-1.5 text-[10px] font-bold ${it.stock > 0 && it.stock <= 2 ? "text-destructive" : "text-muted-foreground"}`}>剩餘 {it.stock} 顆</p>
+                    <p className={`px-1.5 pb-1.5 text-[10px] font-bold ${it.stock > 0 && it.stock <= 2 ? "text-destructive" : "text-muted-foreground"}`}>剩餘 {it.stock} 顆{it.stock > 0 && selected.totalStock > 0 ? `・約 ${Math.round(it.stock / selected.totalStock * 100)}%` : ""}</p>
                   </Button>
                 ))}
               </div>

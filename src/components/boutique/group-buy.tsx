@@ -31,6 +31,7 @@ export function GroupBuyBoard({ igUrl, flash }: { igUrl: string; flash: (m: stri
   };
   return <div className="space-y-5">
     <div className="border-b border-border pb-4"><p className="text-xs text-secondary-foreground">予約共同購入</p><h1 className="mt-1 text-2xl font-bold">預購開團</h1><p className="mt-2 text-sm leading-relaxed text-muted-foreground">店長看好的日本新品，整套預購。登記達目標組數即成團，店長再去日本帶回。</p></div>
+    <ol className="grid grid-cols-3 gap-2 text-center text-[11px] leading-snug" aria-label="跟團流程">{[["1","0 元登記","現在不用付款"],["2","達標成團","未達標自動取消、不收費"],["3","取貨付款","回台後 7-11 賣貨便付款"]].map(([n,t,d])=><li key={n} className="rounded-xl border border-border bg-card px-2 py-2.5"><span className="mx-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{n}</span><p className="mt-1 font-bold text-foreground">{t}</p><p className="mt-0.5 text-muted-foreground">{d}</p></li>)}</ol>
     {list === null && <p className="py-8 text-center text-sm text-muted-foreground" role="status">讀取中…</p>}
     {list?.length === 0 && <p className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">目前沒有開團，敬請期待</p>}
     <div className="grid gap-4 sm:grid-cols-2">{list?.map(g => { const pct = Math.min(100, Math.round(g.joined / g.target * 100)); const joined = mine.includes(g.id); return <article key={g.id} className="polaroid-card overflow-hidden rounded-lg border border-border bg-card p-2">
@@ -42,7 +43,7 @@ export function GroupBuyBoard({ igUrl, flash }: { igUrl: string; flash: (m: stri
         {g.status === 'open' ? <Button className="w-full rounded-full" variant={joined ? 'outline' : 'default'} disabled={busy === g.id || !member.ready} onClick={() => act(g)}>{!member.userId ? '登入會員後跟團' : joined ? '已登記・取消' : '我要跟團（整套）'}</Button> : <p className="text-center text-xs text-muted-foreground">{g.status === 'success' ? '已成團，店長將聯繫登記會員' : '本團已結束'}</p>}
       </div>
     </article>; })}</div>
-    <section className="space-y-1 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground"><p className="font-bold text-foreground">跟團須知</p><p>・登記不需付款；成團後店長會聯繫確認，商品回台後與倉庫流程相同，以 7-11 賣貨便取貨付款。</p><p>・未達目標組數則不成團，登記自動失效。實物以日本官方發售為準。</p></section>
+    <section className="space-y-1 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground"><p className="font-bold text-foreground">跟團須知</p><p>・登記不需付款；成團後店長會聯繫確認，商品回台後與倉庫流程相同，以 7-11 賣貨便取貨付款。</p><p>・成團與否可隨時回本頁查看進度；成團後店長會透過你的會員聯絡資料或 IG 聯繫，不會要求先匯款。</p><p>・未達目標組數則不成團，登記自動失效。實物以日本官方發售為準。</p></section>
     <section className="rounded-lg border border-border bg-card p-4 text-center"><p className="text-sm font-bold">有看到想要的日本扭蛋？</p><p className="mt-1 text-xs text-muted-foreground">截圖私訊店長 IG，有機會成為下一團（依檔期與貨況，不保證找得到）。</p>{igUrl && <Button asChild variant="outline" size="sm" className="mt-3 rounded-full"><a href={igUrl} target="_blank" rel="noopener noreferrer"><Instagram />私訊店長 IG 許願</a></Button>}</section>
   </div>;
 }
