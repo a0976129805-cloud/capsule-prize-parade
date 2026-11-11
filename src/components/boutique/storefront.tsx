@@ -59,7 +59,7 @@ const STAMP: Record<string, string> = {
   daily: 'M8 7h8l-1 13H9zM10 3l1 4M14 3l-1 4M10 12h4',
   shipping: 'M2 7h11v9H2zM13 10h4l3 3v3h-7M6 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M16.5 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3',
 };
-function TrustStamp({ kind, hot }: { kind: string; hot?: boolean }) {
+function TrustStamp({ kind, hot }: { kind: string; hot?: boolean | undefined }) {
   return <span className={`trust-stamp ${hot ? 'omikuji-ring' : ''}`}><svg aria-hidden="true" viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d={STAMP[kind]} /></svg></span>;
 }
 
