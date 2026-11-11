@@ -54,8 +54,12 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "クリームキャット ガチャ屋" },
       { property: "og:description", content: "線上轉蛋、倉庫收藏、7-11 賣貨便貨到付款寄送。" },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:url", content: "https://capsule-prize-parade.lovable.app/" },
+      { property: "og:image", content: "https://capsule-prize-parade.lovable.app/og-cover.jpg" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://capsule-prize-parade.lovable.app/og-cover.jpg" },
     ],
+    links: [{ rel: "canonical", href: "https://capsule-prize-parade.lovable.app/" }],
   }),
   component: Storefront,
 });
