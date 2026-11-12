@@ -276,7 +276,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
         {info.marquee && <div className="overflow-hidden bg-accent py-1 text-xs font-bold text-accent-foreground"><div className="animate-marquee">📢 {info.marquee}</div></div>}
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-4">
+      <main className={`mx-auto max-w-2xl px-4 py-4 ${((tab === 'home' || tab === 'machines') && !selected) ? 'storefront-with-badge' : ''}`}>
         {(tab === "home" || tab === "machines") && !selected && (
           <div className="space-y-4">
             {tab === "home" ? <>
