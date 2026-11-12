@@ -53,3 +53,22 @@ export const adminDeleteGroupBuy = createServerFn({ method: 'POST' }).inputValid
   if (error) throw new Error('刪除失敗');
   return { ok: true };
 });
+
+export const adminGroupMembers = createServerFn({ method: 'POST' })
+  .inputValidator((d: { groupId: string }) => {
+    if (!/^[0-9a-f-]{36}$/i.test(d.groupId)) throw new Error('無效開團');
+    return { groupId: d.groupId };
+  })
+  .handler(async ({ data }) => {
+    await owner();
+    const { setResponseHeader } = await import('@tanstack/react-start/server');
+    setResponseHeader('Cache-Control', 'no-store');
+    const d = await db();
+    const { data: joins, error } = await d.from('group_buy_joins').select('user_id,created_at').eq('group_id',data.groupId).order('created_at');
+    if (error) throw new Error('讀取跟團名單失敗');
+    return await Promise.all((joins ?? []).map(async j => {
+      const [profile, account] = await Promise.all([d.from('profiles').select('name,phone').eq('id',j.user_id).maybeSingle(),d.auth.admin.getUserById(j.user_id)]);
+      if (profile.error || account.error) throw new Error('讀取會員聯絡資料失敗');
+      return { name: profile.data?.name ?? '', phone: profile.data?.phone ?? '', email: account.data.user?.email ?? '', joinedAt: j.created_at };
+    }));
+  });
