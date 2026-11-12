@@ -370,3 +370,6 @@ button, input, textarea, select { font-family: inherit; }
 .group-badge-hot { position: absolute; top: -.45rem; left: -.6rem; border-radius: 9999px; background: var(--primary); color: var(--primary-foreground); font-size: 8px; line-height: 1; padding: 2px 4px; letter-spacing: .05em; }
 @media (prefers-reduced-motion: no-preference) { .group-badge-hot { animation: omikuji-breathe 2.4s ease-in-out infinite; } }
 .polaroid-card { box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 8%, transparent), 0 8px 20px -12px color-mix(in oklab, var(--foreground) 25%, transparent); }
+.group-badge { bottom: calc(7rem + env(safe-area-inset-bottom)); }
+@media (min-width: 760px) { .group-badge { top: 56%; bottom: auto; right: max(0px, calc((100vw - 672px) / 2 - 52px)); } }
+@media (max-width: 759px) { .storefront-with-badge { padding-right: 3.5rem; } }

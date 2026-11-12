@@ -38,6 +38,9 @@ import { getMemberContact } from '@/lib/member-contact.functions';
 import { bestCoupon, couponDiscount, usableCoupon } from '@/lib/rewards';
 import catLogo from "@/assets/cat-logo.png";
 import { GroupBuyBadge, GroupBuyBoard, GroupBuyAdmin } from "@/components/boutique/group-buy";
+import { SalesDashboard } from '@/components/boutique/sales-dashboard';
+import { BrandNote } from '@/components/boutique/brand-note';
+import { filterMachines, type MachineFilter } from '@/lib/machine-filters';
 import { CatAlbum, albumQueryKey } from "@/components/boutique/cat-album";
 import { cardLabel } from "@/lib/cat-cards";
 import { useQueryClient } from "@tanstack/react-query";
@@ -118,7 +121,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
   const [albumOpen, setAlbumOpen] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   useEffect(() => { setDeviceId(getDeviceId()); }, []);
-  const [tag, setTag] = useState<"all" | "low" | "lastone" | "plenty">("all");
+  const [tag, setTag] = useState<MachineFilter>('all');
   const [query, setQuery] = useState("");
   const qc = useQueryClient();
   const refreshAlbum = () => { void qc.invalidateQueries({ queryKey: ['album'] }); };
@@ -179,6 +182,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2500); };
   const selected = machines.find((m) => m.id === selectedId) || null;
+  const visibleMachines = tab === 'home' ? machines.filter(m => m.totalStock > 0).slice(0,8) : filterMachines(machines,tag,query);
   const sum = orderTotal(vault.map((v) => v.price));
   const coupons=member.userId?(wallet.data?.coupons??[]):[];
   const chosenCoupon=couponChoice==='auto'?bestCoupon(coupons,sum.subtotal):coupons.find(c=>c.id===couponChoice);
@@ -272,7 +276,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
         {info.marquee && <div className="overflow-hidden bg-accent py-1 text-xs font-bold text-accent-foreground"><div className="animate-marquee">📢 {info.marquee}</div></div>}
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-4">
+      <main className={`mx-auto max-w-2xl px-4 py-4 ${((tab === 'home' || tab === 'machines') && !selected) ? 'storefront-with-badge' : ''}`}>
         {(tab === "home" || tab === "machines") && !selected && (
           <div className="space-y-4">
             {tab === "home" ? <>
@@ -283,13 +287,13 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
             </> : <>
             <div className="border-b border-border pb-3"><p className="text-xs text-secondary-foreground">ガチャ売り場</p><h1 className="mt-1 text-2xl font-bold">全部扭蛋機</h1></div>
             <label className="relative block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜尋機台名稱" aria-label="搜尋機台" className="w-full rounded-full border border-input bg-card py-2.5 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring" /></label>
-            {machines.length > 0 && <div className="sticky top-[76px] z-20 -mx-4 flex gap-2 overflow-x-auto bg-background/95 px-4 py-1.5" role="tablist" aria-label="機台分類">{([["all", "全部"], ["low", "即將完售"], ["lastone", "最後賞告急"], ["plenty", "庫存充足"], ["sets", "可整套"]] as const).map(([k, l]) => <Button key={k} role="tab" aria-selected={k === "sets" ? false : tag === k} size="sm" variant={k !== "sets" && tag === k ? "default" : "outline"} className="shrink-0 rounded-full" onClick={() => k === "sets" ? go('sets') : setTag(k)}>{l}</Button>)}</div>}
+            {machines.length > 0 && <div className="sticky top-[76px] z-20 -mx-4 flex gap-2 overflow-x-auto bg-background/95 px-4 py-1.5" aria-label="機台分類">{([["all", "全部"], ["stock", "台灣現貨"], ["featured", "店長主推"], ["lastone", "倒數最後賞"], ["low", "即將完售"], ["plenty", "庫存充足"], ["sets", "可整套"]] as const).map(([k, l]) => <Button key={k} aria-pressed={k === 'sets' ? undefined : tag === k} size="sm" variant={k !== "sets" && tag === k ? "default" : "outline"} className="shrink-0 rounded-full" onClick={() => k === "sets" ? go('sets') : setTag(k)}>{l}</Button>)}</div>}
             </>}
             {loading && <div className="py-8 text-center" role="status"><div className="cat-loader"><img src={catLogo} alt="" className="cat-loader-cat" /><span className="cat-loader-ball" /></div><p className="mt-2 text-sm text-muted-foreground">奶油貓正在搬機台…</p></div>}
             {loadError && <Button variant="outline" className="w-full" onClick={reloadMachines}>讀取失敗・重新載入</Button>}
             {!loading && !loadError && machines.length === 0 && <Empty text="店長正在準備新機台" />}
             <div className="grid grid-cols-2 gap-3">
-            {(tab === "home" ? machines.filter((m) => m.totalStock > 0).slice(0, 8) : machines.filter((m) => (tag === "all" || (tag === "low" && m.totalStock > 0 && m.totalStock <= 5) || (tag === "lastone" && !!m.lastOneName && !m.lastOneAwarded && m.totalStock > 0 && m.totalStock <= 10) || (tag === "plenty" && m.totalStock > 10)) && m.title.toLowerCase().includes(query.trim().toLowerCase()))).map((m) => (
+            {visibleMachines.map((m) => (
               <Button variant="bare" size="bare" key={m.id} onClick={() => setSelectedId(m.id)} className="flex min-w-0 flex-col items-stretch overflow-hidden whitespace-normal rounded-lg border border-border bg-card text-left shadow-sm transition active:scale-[.97]">
                 <div className="relative aspect-square bg-muted">
                   <img src={m.coverImage} alt={m.title} loading="lazy" className="h-full w-full object-cover" />
@@ -304,8 +308,9 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
               </Button>
             ))}
             </div>
-            {tab === "machines" && !loading && machines.length > 0 && query && !machines.some((m) => m.title.toLowerCase().includes(query.trim().toLowerCase())) && <Empty text="找不到符合的機台" />}
+            {tab === 'machines' && !loading && !loadError && machines.length > 0 && visibleMachines.length === 0 && <div className="text-center"><Empty text="找不到符合的機台" /><Button variant="outline" size="sm" onClick={()=>{setTag('all');setQuery('');}}>清除篩選</Button></div>}
             {tab === "home" && machines.length > 0 && <Button variant="outline" className="h-auto w-full flex-col gap-0.5 rounded-full border-primary/40 bg-card py-3 font-bold shadow-sm" onClick={() => go('machines')}><span>逛逛全部扭蛋機 →</span><span className="text-[11px] font-normal text-muted-foreground">日本直送・共 {machines.length} 台機台等你探索</span></Button>}
+            {tab === 'home' && <BrandNote igUrl={info.igUrl} />}
             {tab === "home" && <StorefrontFaq lineUrl={info.lineUrl} contactEmail={info.contactEmail} />}
           </div>
         )}
@@ -435,7 +440,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
         </div>
       </nav>
 
-      {tab !== "groups" && tab !== "admin" && !selected && <GroupBuyBadge />}
+      {(tab === 'home' || tab === 'machines') && !selected && <GroupBuyBadge />}
       {menu && <SideMenu info={info} onClose={() => setMenu(false)} go={(t) => { go(t); setMenu(false); }} />}
 
       {setMachine && <SetPopup machine={setMachine} busy={buying} onBuy={purchaseSet} onClose={() => setSetMachine(null)} />}
@@ -475,7 +480,7 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
 }
 
 function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () => Promise<void>; flash: (m: string) => void }) {
-  const [view, setView] = useState<"machines" | "groups" | "orders" | "seller" | "shop" | "rewards">("machines");
+  const [view, setView] = useState<"machines" | "groups" | "sales" | "orders" | "seller" | "shop" | "rewards">("machines");
   const [edit, setEdit] = useState<Machine | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [ostat, setOstat] = useState("待出貨");
@@ -485,7 +490,9 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
   const saveM = useServerFn(adminSaveMachine);
   const delM = useServerFn(adminDeleteMachine);
   const getSeller = useServerFn(adminGetSeller);
-  const loadOrders = () => getOrders().then(setOrders).catch(() => flash("讀取訂單失敗"));
+  const [ordersLoading,setOrdersLoading] = useState(true);
+  const [ordersError,setOrdersError] = useState(false);
+  const loadOrders = () => { setOrdersLoading(true); setOrdersError(false); return getOrders().then(setOrders).catch(() => {setOrdersError(true);flash('讀取訂單失敗');}).finally(()=>setOrdersLoading(false)); };
   useEffect(() => { loadOrders(); }, []);
   const field = "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
 
@@ -547,14 +554,14 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-6 rounded-full bg-muted p-1 text-[11px] font-bold">
-        {(["machines", "groups", "orders", "seller", "shop", "rewards"] as const).map((v) => (
-          <Button variant="bare" size="bare" key={v} onClick={() => setView(v)} className={`rounded-full py-2 ${view === v ? "bg-card text-primary shadow" : "text-muted-foreground"}`}>
-            {v === "machines" ? "扭蛋機" : v === "groups" ? "開團" : v === "orders" ? `訂單` : v === "seller" ? "賣家設定" : v==='rewards'?'會員優惠':"商店公告"}
+      <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-[11px] font-bold">
+        {(["machines", "groups", "orders", "sales", "seller", "shop", "rewards"] as const).map((v) => (
+          <Button variant="bare" size="bare" key={v} onClick={() => setView(v)} className={`shrink-0 rounded-full px-3 py-2 ${view === v ? "bg-card text-primary shadow" : "text-muted-foreground"}`}>
+            {v === "machines" ? "扭蛋機" : v === "groups" ? "開團" : v === 'sales' ? '銷量統計' : v === "orders" ? `訂單` : v === "seller" ? "賣家設定" : v==='rewards'?'會員優惠':"商店公告"}
           </Button>
         ))}
       </div>
-      {view === 'groups' ? <GroupBuyAdmin flash={flash} upload={(onDone) => <ImageUpload label="上傳開團圖片" flash={flash} onDone={onDone} />} /> : view === 'rewards' ? <RewardSettingsForm flash={flash}/> : view === "shop" ? <ShopInfoForm flash={flash} /> : view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
+      {view === 'sales' ? <SalesDashboard orders={orders} machines={machines} loading={ordersLoading} error={ordersError} refresh={()=>{void loadOrders();}} /> : view === 'groups' ? <GroupBuyAdmin flash={flash} upload={(onDone) => <ImageUpload label="上傳開團圖片" flash={flash} onDone={onDone} />} /> : view === 'rewards' ? <RewardSettingsForm flash={flash}/> : view === "shop" ? <ShopInfoForm flash={flash} /> : view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
         <>
           <Button variant="bare" size="bare" onClick={() => setEdit({ id: "m" + Date.now(), title: "", price: 100, totalStock: 0, setPrice: 0, coverImage: "", status: "熱烈販售中", items: [] })}
             className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Plus className="h-4 w-4" /> 新增扭蛋機</Button>
