@@ -1,14 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
-import { Instagram, Trash2, Edit3, Plus } from 'lucide-react';
+import { Instagram, Trash2, Edit3, Plus, Users, Copy } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useMember } from '@/components/boutique/member-session';
-import { listGroupBuys, myGroupJoins, toggleGroupJoin, adminSaveGroupBuy, adminDeleteGroupBuy, type GroupBuy } from '@/lib/group-buy.functions';
+import { listGroupBuys, myGroupJoins, toggleGroupJoin, adminSaveGroupBuy, adminDeleteGroupBuy, adminGroupMembers, type GroupBuy } from '@/lib/group-buy.functions';
 
 /** Floating side tab; sits above the dock so it never covers buy buttons. */
 export function GroupBuyBadge() {
-  return <Link to="/group-buys" aria-label="預購開團" className="group-badge fixed right-0 top-[42%] z-20 flex flex-col items-center gap-1 rounded-l-xl border border-r-0 border-border bg-card px-1.5 py-2.5 text-primary shadow-md">
+  return <Link to="/group-buys" aria-label="預購開團" className="group-badge fixed right-0 bottom-28 z-20 flex flex-col items-center gap-1 rounded-l-lg border border-r-0 border-border bg-card px-1.5 py-2.5 text-primary shadow-md">
     <span aria-hidden="true" className="group-badge-seal"><svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round"><path d="M2 19 9.5 7l2.5 3 2-2.5L22 19zM7.6 10l1.9 1.6 2.5-1.6 2 1.4 1.5-1.2" /></svg><b className="group-badge-hot">HOT</b></span>
     <span className="text-[11px] font-bold leading-tight [writing-mode:vertical-rl] tracking-[0.2em]">預購開團</span>
   </Link>;
@@ -53,6 +54,16 @@ const blank: Omit<GroupBuy, 'joined' | 'id'> & { id?: string } = { title: '', im
 export function GroupBuyAdmin({ flash, upload }: { flash: (m: string) => void; upload: (onDone: (url: string) => void) => ReactNode }) {
   const fetchList = useServerFn(listGroupBuys); const save = useServerFn(adminSaveGroupBuy); const del = useServerFn(adminDeleteGroupBuy);
   const [list, setList] = useState<GroupBuy[]>([]); const [edit, setEdit] = useState<typeof blank | null>(null);
+  const fetchMembers = useServerFn(adminGroupMembers);
+  const [roster,setRoster] = useState<GroupBuy | null>(null);
+  const [members,setMembers] = useState<Awaited<ReturnType<typeof adminGroupMembers>> | null>(null);
+  const [rosterError,setRosterError] = useState(false);
+  useEffect(()=>{
+    if (!roster) {setMembers(null);return;}
+    let active=true;setMembers(null);setRosterError(false);
+    void fetchMembers({data:{groupId:roster.id}}).then(r=>{if(active)setMembers(r);}).catch(()=>{if(active)setRosterError(true);});
+    return ()=>{active=false;};
+  },[roster,fetchMembers]);
   const load = () => fetchList().then(setList).catch(() => flash('讀取開團失敗'));
   useEffect(() => { void load(); }, []);
   const field = 'w-full rounded-lg border border-input bg-background px-3 py-2 text-sm';
@@ -70,7 +81,8 @@ export function GroupBuyAdmin({ flash, upload }: { flash: (m: string) => void; u
     <div className="flex gap-2"><Button variant="outline" className="flex-1" onClick={() => setEdit(null)}>取消</Button><Button className="flex-1" onClick={async () => { try { await save({ data: edit }); setEdit(null); await load(); flash('已儲存'); } catch (e) { flash(e instanceof Error ? e.message : '儲存失敗'); } }}>儲存</Button></div>
   </div>;
   return <div className="space-y-2">
+    <Dialog open={!!roster} onOpenChange={open=>{if(!open)setRoster(null);}}><DialogContent className="max-h-[85dvh] w-[calc(100%-2rem)] overflow-y-auto rounded-lg p-4"><DialogTitle className="pr-6 leading-snug">{roster?.title}・跟團名單</DialogTitle><DialogDescription>僅店長可見；每位會員登記一組。請個別聯絡，不要公開會員資料。</DialogDescription>{rosterError ? <p role="alert" className="text-sm text-destructive">讀取失敗，請關閉後重新開啟。</p> : members===null ? <p role="status">讀取中…</p> : members.length===0 ? <p className="py-4 text-sm text-muted-foreground">尚無會員登記</p> : <><Button size="sm" variant="outline" onClick={async()=>{try {await navigator.clipboard.writeText(members.map(m=>m.email).filter(Boolean).join('; '));flash('Email 已複製，群發時請使用密件副本');}catch{flash('無法複製，請手動選取 Email');}}}><Copy className="size-4" />複製 Email</Button><div className="divide-y divide-border">{members.map((m,i)=><div key={i} className="space-y-1 py-3 text-sm"><p className="font-bold">{m.name || '尚未填寫姓名'}</p><p className="break-all">{m.email || '無 Email'}</p><p>{m.phone || '尚未填寫電話'}</p><p className="text-xs text-muted-foreground">登記於 {new Date(m.joinedAt).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})}</p></div>)}</div></>}</DialogContent></Dialog>
     <Button className="w-full" onClick={() => setEdit({ ...blank })}><Plus />新增開團</Button>
-    {list.map(g => <div key={g.id} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2 text-sm">{g.image ? <img src={g.image} alt="" className="h-12 w-12 rounded object-cover" /> : <div className="h-12 w-12 rounded bg-muted" />}<div className="min-w-0 flex-1"><p className="truncate font-bold">{g.title}</p><p className="text-xs text-muted-foreground">{STATUS[g.status]}・{g.joined}/{g.target} 組</p></div><Button size="icon" variant="ghost" aria-label="編輯" onClick={() => { const { joined: _j, ...rest } = g; setEdit(rest); }}><Edit3 /></Button><Button size="icon" variant="ghost" aria-label="刪除" onClick={async () => { if (!confirm('確定刪除此團？登記紀錄會一併刪除')) return; try { await del({ data: { id: g.id } }); await load(); } catch { flash('刪除失敗'); } }}><Trash2 /></Button></div>)}
+    {list.map(g => <div key={g.id} className="flex items-center gap-1 rounded-lg border border-border bg-card p-2 text-sm">{g.image ? <img src={g.image} alt="" className="h-10 w-10 shrink-0 rounded object-cover" /> : <div className="h-10 w-10 shrink-0 rounded bg-muted" />}<div className="min-w-0 flex-1"><p className="truncate font-bold">{g.title}</p><p className="text-xs text-muted-foreground">{STATUS[g.status]}・{g.joined}/{g.target} 組</p></div><Button size="icon" variant="ghost" aria-label={`查看${g.title}跟團名單`} title="跟團名單" onClick={()=>setRoster(g)}><Users /></Button><Button size="icon" variant="ghost" aria-label="編輯" onClick={() => { const { joined: _j, ...rest } = g; setEdit(rest); }}><Edit3 /></Button><Button size="icon" variant="ghost" aria-label="刪除" onClick={async () => { if (!confirm('確定刪除此團？登記紀錄會一併刪除')) return; try { await del({ data: { id: g.id } }); await load(); } catch { flash('刪除失敗'); } }}><Trash2 /></Button></div>)}
   </div>;
 }

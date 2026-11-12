@@ -31,3 +31,6 @@
 - Group repeated vault prizes only in browser presentation using prize identity and stored snapshots; retain individual reservations for totals, expiry and checkout.
 - Snapshot fulfillment on vault insertion inside the stock transaction and persist checkout's latest preorder date in orders; machine edits must not silently rewrite existing purchase schedules.
 - Keep preorder consent validated against the locked vault schedule in checkout RPC; display acknowledgements cannot replace authoritative transaction validation.
+- Compute sales summaries from non-cancelled order item snapshots, separating collected orders and excluding gifts and shipping; never infer set purchases from duplicate-free contents because historical orders lack purchase-mode snapshots.
+- Return group participant contacts only through an owner-session-checked, no-store server function; public group data remains anonymous counts only.
+- Derive featured-machine filters from the owner's ordered in-stock homepage selection; never auto-rank the public storefront by sales.
