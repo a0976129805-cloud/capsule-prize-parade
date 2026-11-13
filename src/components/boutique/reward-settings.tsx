@@ -8,7 +8,7 @@ import { OmikujiDraw,type OmikujiState } from './omikuji-draw';
 import { CardViewer } from './cat-album';
 import { rollCards, CARDS } from '@/lib/cat-cards';
 export function RewardSettingsForm({flash}:{flash:(s:string)=>void}){
- const get=useServerFn(adminRewardSettings),save=useServerFn(saveRewardSettings);const [s,setS]=useState<RewardSettings>(emptyRewards);const [busy,setBusy]=useState(false);const [loaded,setLoaded]=useState(false);const [error,setError]=useState('');
+ const get=useServerFn(adminRewardSettings),save=useServerFn(saveRewardSettings);const cache=useQueryClient();const [s,setS]=useState<RewardSettings>(emptyRewards);const [busy,setBusy]=useState(false);const [loaded,setLoaded]=useState(false);const [error,setError]=useState('');
  useEffect(()=>{get().then(v=>{setS(v);setLoaded(true);}).catch(()=>setError('優惠設定讀取失敗，請重新進入後台。'));},[]);
  const [trial,setTrial]=useState<OmikujiState|null>(null);
  const [trialCard,setTrialCard]=useState<number|null>(null);

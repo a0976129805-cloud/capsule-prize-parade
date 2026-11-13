@@ -283,6 +283,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
             {tab === "home" ? <>
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
             <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
+            <NewcomerInvite onOpen={() => go('coupons')} />
             <DrawFeed machines={machines} />
             <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のおすすめ</p><h2 className="text-lg font-bold">店長精選</h2></div><AlbumProgress deviceId={deviceId} onOpen={() => setAlbumOpen(true)} /></div>
             </> : <>

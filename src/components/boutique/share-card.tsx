@@ -47,7 +47,7 @@ export function ShareCard({ items, onClose, flash }: { items: VaultItem[]; onClo
         <p className="mb-3 text-center font-handwritten text-xl text-secondary-foreground">本日の小さな幸せ</p>
         <div className={items.length === 1 ? 'mx-auto w-full' : 'grid grid-cols-2 gap-2'}>
           {items.map(item => <figure key={item.vaultId} className="min-w-0 bg-card p-1.5 shadow-sm">
-            <img src={item.image} loading="eager" alt={item.name} className={`w-full bg-muted object-contain ${items.length === 1 ? 'aspect-square' : 'aspect-square'}`} />
+            <img src={item.image} loading="eager" alt={item.name} className="aspect-square w-full bg-muted object-contain" />
             <figcaption className="min-h-8 break-words px-0.5 pb-0.5 pt-1.5 text-center text-[10px] font-bold leading-tight">{item.isLastOne && '最後賞・'}{item.name}</figcaption>
           </figure>)}
         </div>
