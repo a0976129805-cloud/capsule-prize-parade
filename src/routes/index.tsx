@@ -40,6 +40,7 @@ import catLogo from "@/assets/cat-logo.png";
 import { GroupBuyBadge, GroupBuyBoard, GroupBuyAdmin } from "@/components/boutique/group-buy";
 import { SalesDashboard } from '@/components/boutique/sales-dashboard';
 import { BrandNote } from '@/components/boutique/brand-note';
+import { NewcomerInvite } from '@/components/boutique/newcomer-invite';
 import { filterMachines, type MachineFilter } from '@/lib/machine-filters';
 import { CatAlbum, albumQueryKey } from "@/components/boutique/cat-album";
 import { cardLabel } from "@/lib/cat-cards";

@@ -1,5 +1,6 @@
 import { useEffect,useState } from 'react';
 import { useServerFn } from '@tanstack/react-start';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { adminRewardSettings,saveRewardSettings } from '@/lib/rewards.functions';
 import { emptyRewards,type RewardSettings } from '@/lib/rewards';
