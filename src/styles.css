@@ -134,7 +134,7 @@ button, input, textarea, select { font-family: inherit; }
 .share-print { font-family: var(--font-round); }
 .share-polaroid { padding: 16px; border: 1px solid var(--border); box-shadow: 0 8px 24px color-mix(in oklab, var(--foreground) 10%, transparent); }
 .share-photo { border: 1px solid var(--border); }
-.share-stamp { display: flex; width: 68px; height: 68px; flex: 0 0 68px; transform: rotate(-9deg); flex-direction: column; align-items: center; justify-content: center; border: 2px solid var(--primary); border-radius: 50%; color: var(--primary); line-height: 1; }
+.share-stamp { position: relative; display: flex; width: 68px; height: 68px; flex: 0 0 68px; transform: rotate(-9deg); flex-direction: column; align-items: center; justify-content: center; border: 2px solid var(--primary); border-radius: 50%; color: var(--primary); line-height: 1; }
 .share-stamp::before { content: ''; position: absolute; width: 58px; height: 58px; border: 1px dashed var(--primary); border-radius: 50%; }
 .share-stamp svg { width: 19px; height: 19px; margin-bottom: 3px; }
 .share-stamp span { font-size: 11px; font-weight: 700; }
