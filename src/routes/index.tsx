@@ -40,6 +40,7 @@ import catLogo from "@/assets/cat-logo.png";
 import { GroupBuyBadge, GroupBuyBoard, GroupBuyAdmin } from "@/components/boutique/group-buy";
 import { SalesDashboard } from '@/components/boutique/sales-dashboard';
 import { BrandNote } from '@/components/boutique/brand-note';
+import { NewcomerInvite } from '@/components/boutique/newcomer-invite';
 import { filterMachines, type MachineFilter } from '@/lib/machine-filters';
 import { CatAlbum, albumQueryKey } from "@/components/boutique/cat-album";
 import { cardLabel } from "@/lib/cat-cards";
@@ -282,6 +283,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
             {tab === "home" ? <>
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
             <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
+            <NewcomerInvite onOpen={() => go('coupons')} />
             <DrawFeed machines={machines} />
             <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のおすすめ</p><h2 className="text-lg font-bold">店長精選</h2></div><AlbumProgress deviceId={deviceId} onOpen={() => setAlbumOpen(true)} /></div>
             </> : <>
@@ -449,7 +451,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
 
       {albumOpen && deviceId && <CatAlbum deviceId={deviceId} onClose={() => setAlbumOpen(false)} flash={flash} onLogin={() => { setAlbumOpen(false); go("coupons"); }} />}
       <MemberDrawPrompt open={loginPrompt} onClose={() => setLoginPrompt(false)} onLogin={() => { setLoginPrompt(false); setSetMachine(null); navigate({ to: '/auth' }); }} />
-      {result && <DrawResultDialog cards={newCards} repeatCount={repeatDrawCount(result)} repeatPrice={selected ? selected.price * repeatDrawCount(result) : undefined} onAlbum={() => { setResult(null); setAlbumOpen(true); }} items={result} canRepeat={!spinning && !!selected && selected.totalStock >= repeatDrawCount(result)} onClose={() => { setResult(null); audioRef.current?.stop(); }} onRepeat={() => { const n = repeatDrawCount(result); audioRef.current?.stop(); setResult(null); draw(n); }} onVault={() => { audioRef.current?.stop(); setResult(null); go('vault'); }} onShare={() => setShareItems(result)} />}
+      {result && <DrawResultDialog cards={newCards} repeatCount={repeatDrawCount(result)} repeatPrice={selected ? selected.price * repeatDrawCount(result) : undefined} onAlbum={() => { setResult(null); setAlbumOpen(true); }} items={result} canRepeat={!spinning && !!selected && selected.totalStock >= repeatDrawCount(result)} onClose={() => { setResult(null); audioRef.current?.stop(); }} onRepeat={() => { const n = repeatDrawCount(result); audioRef.current?.stop(); setResult(null); draw(n); }} onVault={() => { audioRef.current?.stop(); setResult(null); go('vault'); }} onShare={() => { setShareItems(result); setResult(null); }} />}
       {shareItems && <ShareCard items={shareItems} onClose={() => setShareItems(null)} flash={flash} />}
 
       {picker && <StorePicker onClose={() => setPicker(false)} onPick={(st) => { setShip((p) => ({ ...p, storeName: st.name, storeCode: st.code })); setPicker(false); }} />}

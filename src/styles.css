@@ -19,6 +19,7 @@
  */
 
 @theme inline {
+  --font-handwritten: var(--font-handwritten);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -104,6 +105,7 @@
   --overlay: oklch(0.2 0.03 40 / 0.6);
   --dots: radial-gradient(oklch(0.66 0.19 20 / 0.12) 1.5px, transparent 1.5px);
   --font-round: "Zen Maru Gothic", "Noto Sans TC", system-ui, sans-serif;
+  --font-handwritten: "Zen Kurenaido", "Noto Sans TC", cursive;
   --shadow-dock: 0 4px 24px oklch(0.28 0.03 40 / 0.12);
   --capsule-red: oklch(0.72 0.16 20);
   --capsule-green: oklch(0.8 0.09 160);
@@ -130,6 +132,13 @@ button, input, textarea, select { font-family: inherit; }
 .dock-set-capsule { width: 13px; height: 13px; bottom: 3px; right: 0; border: 1px solid var(--primary); border-radius: 50%; background: linear-gradient(var(--primary) 50%, var(--card) 50%); }
 .dock-set-star { top: -3px; right: 0; font-size: 12px; color: var(--accent-foreground); }
 .share-print { font-family: var(--font-round); }
+.share-polaroid { padding: 16px; border: 1px solid var(--border); box-shadow: 0 8px 24px color-mix(in oklab, var(--foreground) 10%, transparent); }
+.share-photo { border: 1px solid var(--border); }
+.share-stamp { position: relative; display: flex; width: 68px; height: 68px; flex: 0 0 68px; transform: rotate(-9deg); flex-direction: column; align-items: center; justify-content: center; border: 2px solid var(--primary); border-radius: 50%; color: var(--primary); line-height: 1; }
+.share-stamp::before { content: ''; position: absolute; width: 58px; height: 58px; border: 1px dashed var(--primary); border-radius: 50%; }
+.share-stamp svg { width: 19px; height: 19px; margin-bottom: 3px; }
+.share-stamp span { font-size: 11px; font-weight: 700; }
+.share-stamp small { margin-top: 3px; font-size: 8px; letter-spacing: 2px; }
 .prize-gallery { max-height: 90dvh; }
 .gallery-photo { max-height: 50dvh; }
 .draw-feed-track { scroll-snap-type: x proximity; scrollbar-width: thin; }

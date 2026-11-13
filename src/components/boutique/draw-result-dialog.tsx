@@ -21,7 +21,7 @@ export function DrawResultDialog({ items, cards = [], onAlbum, canRepeat, repeat
       {cards.length > 0 && <div className="mt-5 rounded-xl bg-secondary p-3"><p className="text-sm font-bold">🐾 附贈貓咪收藏卡 ×{cards.length}{cards.some((n) => CARDS[n - 1]?.rarity === 'SSR') ? '・SSR 出現！' : ''}</p><p className="mt-1 text-xs text-muted-foreground">待結帳解鎖・24 小時未結帳即作廢</p><div className="mt-2 flex justify-center gap-1.5">{cards.map((n, i) => <div key={i} className="card-reveal w-[18%] min-w-12" style={{ animationDelay: `${i * .15}s` }}><CatCardView no={n} className="cat-card-lit" /></div>)}</div>{onAlbum && <Button variant="link" size="sm" onClick={onAlbum}>打開卡冊看看 →</Button>}</div>}
       <div className="mt-5 grid grid-cols-2 gap-2"><Button disabled={!canRepeat} onClick={onRepeat} className="h-14 gap-1 rounded-full px-2"><RotateCw /><span className="text-xs leading-tight">{repeatCount === 5 ? '再來五連抽' : '再來一抽'}{repeatPrice !== undefined && <span className="mt-1 block text-[11px]">NT${repeatPrice.toLocaleString()}</span>}</span></Button><Button variant="outline" onClick={onVault} className="h-14 rounded-full text-xs">查看倉庫・結帳</Button></div>
       {!canRepeat && <p className="mt-2 text-xs text-muted-foreground">目前庫存不足以再抽，先到倉庫完成結帳吧。</p>}
-      <Button variant="ghost" className="mt-3 w-full" onClick={onShare}><Share2 />製作我的收藏分享卡</Button>
+      <Button variant="outline" className="mt-3 h-12 w-full rounded-full border-primary/40" onClick={onShare}><Share2 />製作拍立得分享圖</Button>
       <Button variant="ghost" className="mt-1 w-full text-muted-foreground" onClick={onClose}>關閉・繼續逛逛</Button>
     </DialogPrimitive.Content>
   </DialogPortal></Dialog>;
