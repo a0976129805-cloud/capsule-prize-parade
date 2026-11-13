@@ -104,6 +104,7 @@
   --overlay: oklch(0.2 0.03 40 / 0.6);
   --dots: radial-gradient(oklch(0.66 0.19 20 / 0.12) 1.5px, transparent 1.5px);
   --font-round: "Zen Maru Gothic", "Noto Sans TC", system-ui, sans-serif;
+  --font-handwritten: "Zen Kurenaido", "Noto Sans TC", cursive;
   --shadow-dock: 0 4px 24px oklch(0.28 0.03 40 / 0.12);
   --capsule-red: oklch(0.72 0.16 20);
   --capsule-green: oklch(0.8 0.09 160);

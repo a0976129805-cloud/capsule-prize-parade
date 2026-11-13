@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { useSession } from '@tanstack/react-start/server';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
-import { emptyRewards, rewardSettingsSchema } from './rewards';
+import { emptyRewards, newcomerPreview, rewardSettingsSchema } from './rewards';
 async function owner() { const s=await useSession<{admin?:boolean}>({password:process.env['SESSION_SECRET']!,name:'gacha-admin',cookie:{httpOnly:true,secure:true,sameSite:'none',path:'/'}});if(!s.data.admin) throw new Error('Forbidden'); }
 export const adminRewardSettings=createServerFn({method:'GET'}).handler(async()=>{await owner();const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');const {data,error}=await db.from('reward_settings').select('data').eq('id',1).maybeSingle();if(error)throw new Error('讀取優惠失敗');return rewardSettingsSchema.parse(data?.data??emptyRewards);});
 export const saveRewardSettings=createServerFn({method:'POST'}).inputValidator((d:unknown)=>rewardSettingsSchema.parse(d)).handler(async({data})=>{await owner();const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');const {error}=await db.from('reward_settings').upsert({id:1,data});if(error)throw new Error('儲存優惠失敗');return {ok:true};});

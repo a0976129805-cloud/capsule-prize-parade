@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {emptyRewards,rewardSettingsSchema,couponDiscount,bestCoupon,usableCoupon,type Coupon} from '@/lib/rewards';
+import {emptyRewards,newcomerPreview,rewardSettingsSchema,couponDiscount,bestCoupon,usableCoupon,type Coupon} from '@/lib/rewards';
 import {orderTotal} from '@/lib/shipping';
 import {buildMyshipRows} from '@/lib/exportMyship';
 const c:Coupon={id:'one',name:'測試券',amount:20,minimum:300,expires_at:'2099-01-01',used_order_id:null};
