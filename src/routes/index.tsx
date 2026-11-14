@@ -33,6 +33,7 @@ import { canSubmitCheckout, PICKUP_DAYS } from '@/lib/checkout-consent';
 import { MachineOrderList } from '@/components/boutique/machine-order-list';
 import { RewardWallet, useWallet } from '@/components/boutique/reward-wallet';
 import { RewardSettingsForm } from '@/components/boutique/reward-settings';
+import { PromoCodeAdmin } from '@/components/boutique/promo-code-admin';
 import { useMember } from '@/components/boutique/member-session';
 import { getMemberContact } from '@/lib/member-contact.functions';
 import { bestCoupon, couponDiscount, usableCoupon } from '@/lib/rewards';
@@ -563,7 +564,7 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
           </Button>
         ))}
       </div>
-      {view === 'sales' ? <SalesDashboard orders={orders} machines={machines} loading={ordersLoading} error={ordersError} refresh={()=>{void loadOrders();}} /> : view === 'groups' ? <GroupBuyAdmin flash={flash} upload={(onDone) => <ImageUpload label="上傳開團圖片" flash={flash} onDone={onDone} />} /> : view === 'rewards' ? <RewardSettingsForm flash={flash}/> : view === "shop" ? <ShopInfoForm flash={flash} /> : view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
+      {view === 'sales' ? <SalesDashboard orders={orders} machines={machines} loading={ordersLoading} error={ordersError} refresh={()=>{void loadOrders();}} /> : view === 'groups' ? <GroupBuyAdmin flash={flash} upload={(onDone) => <ImageUpload label="上傳開團圖片" flash={flash} onDone={onDone} />} /> : view === 'rewards' ? <div className="space-y-6"><PromoCodeAdmin flash={flash}/><RewardSettingsForm flash={flash}/></div> : view === "shop" ? <ShopInfoForm flash={flash} /> : view === "seller" ? <SellerForm flash={flash} /> : view === "machines" ? (
         <>
           <Button variant="bare" size="bare" onClick={() => setEdit({ id: "m" + Date.now(), title: "", price: 100, totalStock: 0, setPrice: 0, coverImage: "", status: "熱烈販售中", items: [] })}
             className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Plus className="h-4 w-4" /> 新增扭蛋機</Button>
