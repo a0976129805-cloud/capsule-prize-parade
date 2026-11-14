@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useServerFn } from '@tanstack/react-start';
 import { Plus, RefreshCw, Ticket, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ export function PromoCodeAdmin({ flash }: { flash: (message: string) => void }) 
   };
   useEffect(() => { void load(); }, []);
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
     setBusy('create');
     setError('');
