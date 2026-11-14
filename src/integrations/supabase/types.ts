@@ -447,6 +447,75 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_codes: {
+        Row: {
+          amount: number
+          code: string
+          created_at: string
+          days: number
+          enabled: boolean
+          id: string
+          minimum: number
+          name: string
+        }
+        Insert: {
+          amount?: number
+          code: string
+          created_at?: string
+          days?: number
+          enabled?: boolean
+          id?: string
+          minimum?: number
+          name: string
+        }
+        Update: {
+          amount?: number
+          code?: string
+          created_at?: string
+          days?: number
+          enabled?: boolean
+          id?: string
+          minimum?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      promo_redemptions: {
+        Row: {
+          code_id: string
+          coupon_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          code_id: string
+          coupon_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          code_id?: string
+          coupon_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_redemptions_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: true
+            referencedRelation: "member_coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reward_settings: {
         Row: {
           data: Json
@@ -613,6 +682,7 @@ export type Database = {
         Args: { _kind: string; _user: string }
         Returns: Json
       }
+      delete_promo_code: { Args: { _id: string }; Returns: undefined }
       draw_prizes: {
         Args: { _device: string; _n: number; _product: string }
         Returns: {
@@ -642,6 +712,10 @@ export type Database = {
       merge_cat_album: {
         Args: { _device: string; _user: string }
         Returns: undefined
+      }
+      redeem_promo_code: {
+        Args: { _code: string; _user: string }
+        Returns: Json
       }
       release_expired_vault: {
         Args: { _cutoff: string; _device?: string }
