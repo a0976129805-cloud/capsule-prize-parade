@@ -28,3 +28,17 @@ describe('店長自訂優惠代碼',()=>{
  it('有效期限只能設定1至90天',()=>{expect(promoCodeSchema.safeParse({...valid,days:0}).success).toBe(false);expect(promoCodeSchema.safeParse({...valid,days:91}).success).toBe(false);});
  it('代碼只接受英文數字與連字號底線',()=>{expect(promoCodeSchema.safeParse({...valid,code:'THREADS 100'}).success).toBe(false);expect(promoCodeSchema.safeParse({...valid,code:'cat_50'}).success).toBe(true);});
 });
+import { dailyPick, filterMachines } from '@/lib/machine-filters';
+describe('machine search & daily pick', () => {
+  const ms = [
+    { id: 'a', title: '潦草小狗', totalStock: 3, items: [{ name: '睡覺狗' }] },
+    { id: 'b', title: '貓咪系列', totalStock: 0, items: [{ name: '黑貓' }] },
+    { id: 'c', title: '吉伊卡哇', totalStock: 5, items: [{ name: '小八' }] },
+  ] as never[];
+  it('search matches item names', () => { expect(filterMachines(ms, 'all', '小八').map((m: { id: string }) => m.id)).toEqual(['c']); });
+  it('daily pick is stable and only in stock', () => {
+    const p = dailyPick(ms, '2026-11-15');
+    expect(p).toBe(dailyPick(ms, '2026-11-15'));
+    expect(p && (p as { id: string }).id).not.toBe('b');
+  });
+});
