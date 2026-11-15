@@ -42,7 +42,7 @@ import { GroupBuyBadge, GroupBuyBoard, GroupBuyAdmin } from "@/components/boutiq
 import { SalesDashboard } from '@/components/boutique/sales-dashboard';
 import { BrandNote } from '@/components/boutique/brand-note';
 import { NewcomerInvite } from '@/components/boutique/newcomer-invite';
-import { filterMachines, type MachineFilter } from '@/lib/machine-filters';
+import { filterMachines, dailyPick, taipeiDay, type MachineFilter } from '@/lib/machine-filters';
 import { CatAlbum, albumQueryKey } from "@/components/boutique/cat-album";
 import { cardLabel } from "@/lib/cat-cards";
 import { useQueryClient } from "@tanstack/react-query";
@@ -183,6 +183,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
   }, [initialTab]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2500); };
+  useEffect(() => { if (tab !== 'machines' || !machines.length) return; const id = sessionStorage.getItem('open-machine'); if (!id) return; sessionStorage.removeItem('open-machine'); if (machines.some(m => m.id === id)) setSelectedId(id); }, [tab, machines]);
   const selected = machines.find((m) => m.id === selectedId) || null;
   const visibleMachines = tab === 'home' ? machines.filter(m => m.totalStock > 0).slice(0,8) : filterMachines(machines,tag,query);
   const sum = orderTotal(vault.map((v) => v.price));
@@ -289,7 +290,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
             <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のおすすめ</p><h2 className="text-lg font-bold">店長精選</h2></div><AlbumProgress deviceId={deviceId} onOpen={() => setAlbumOpen(true)} /></div>
             </> : <>
             <div className="border-b border-border pb-3"><p className="text-xs text-secondary-foreground">ガチャ売り場</p><h1 className="mt-1 text-2xl font-bold">全部扭蛋機</h1></div>
-            <label className="relative block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜尋機台名稱" aria-label="搜尋機台" className="w-full rounded-full border border-input bg-card py-2.5 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring" /></label>
+            <label className="relative block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜尋機台或款式，例如：小狗、貓咪" aria-label="搜尋機台" className="w-full rounded-full border border-input bg-card py-2.5 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring" /></label>
             {machines.length > 0 && <div className="sticky top-[76px] z-20 -mx-4 flex gap-2 overflow-x-auto bg-background/95 px-4 py-1.5" aria-label="機台分類">{([["all", "全部"], ["stock", "台灣現貨"], ["featured", "店長主推"], ["lastone", "倒數最後賞"], ["low", "即將完售"], ["plenty", "庫存充足"], ["sets", "可整套"]] as const).map(([k, l]) => <Button key={k} aria-pressed={k === 'sets' ? undefined : tag === k} size="sm" variant={k !== "sets" && tag === k ? "default" : "outline"} className="shrink-0 rounded-full" onClick={() => k === "sets" ? go('sets') : setTag(k)}>{l}</Button>)}</div>}
             </>}
             {loading && <div className="py-8 text-center" role="status"><div className="cat-loader"><img src={catLogo} alt="" className="cat-loader-cat" /><span className="cat-loader-ball" /></div><p className="mt-2 text-sm text-muted-foreground">奶油貓正在搬機台…</p></div>}
@@ -311,7 +312,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
               </Button>
             ))}
             </div>
-            {tab === 'machines' && !loading && !loadError && machines.length > 0 && visibleMachines.length === 0 && <div className="text-center"><Empty text="找不到符合的機台" /><Button variant="outline" size="sm" onClick={()=>{setTag('all');setQuery('');}}>清除篩選</Button></div>}
+            {tab === 'machines' && !loading && !loadError && machines.length > 0 && visibleMachines.length === 0 && <div className="space-y-3 rounded-lg border border-dashed border-primary/50 bg-card p-5 text-center"><img src={catLogo} alt="" className="mx-auto h-14 w-14 object-contain" /><p className="font-bold">{query.trim() ? `目前還沒有「${query.trim()}」` : '找不到符合的機台'}</p><p className="text-xs text-muted-foreground">把名稱或截圖私訊給店長，我在日本扭蛋店幫你找找看。</p>{info.igUrl && <a href={info.igUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground"><Instagram className="h-4 w-4" />私訊店長許願</a>}<Button variant="outline" size="sm" onClick={()=>{setTag('all');setQuery('');}}>清除搜尋</Button></div>}
             {tab === "home" && machines.length > 0 && <Button variant="outline" className="h-auto w-full flex-col gap-0.5 rounded-full border-primary/40 bg-card py-3 font-bold shadow-sm" onClick={() => go('machines')}><span>逛逛全部扭蛋機 →</span><span className="text-[11px] font-normal text-muted-foreground">日本直送・共 {machines.length} 台機台等你探索</span></Button>}
             {tab === 'home' && <BrandNote igUrl={info.igUrl} />}
             {tab === "home" && <StorefrontFaq lineUrl={info.lineUrl} contactEmail={info.contactEmail} />}
@@ -425,7 +426,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
           </div>
         )}
 
-        {tab === "coupons" && <RewardWallet />}
+        {tab === "coupons" && <RewardWallet pick={(() => { const m = dailyPick(machines, taipeiDay()); return m ? { title: m.title, image: m.coverImage, onGo: () => { sessionStorage.setItem('open-machine', m.id); go('machines'); } } : null; })()} />}
         {tab === "groups" && <GroupBuyBoard igUrl={info.igUrl} flash={flash} />}
         {tab === "admin" && <AdminGate><Admin machines={machines} reload={reloadMachines} flash={flash} /></AdminGate>}
       </main>

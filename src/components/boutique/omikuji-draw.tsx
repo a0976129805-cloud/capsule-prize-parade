@@ -53,7 +53,8 @@ function Tube({ shaking, revealed }: { shaking: boolean; revealed: boolean }) {
   </div>;
 }
 
-export function OmikujiDraw({ state, onShake, onClose }: { state: OmikujiState | null; onShake: () => void; onClose: () => void }) {
+export type OmikujiPick = { title: string; image: string; onGo: () => void };
+export function OmikujiDraw({ state, onShake, onClose, pick }: { state: OmikujiState | null; onShake: () => void; onClose: () => void; pick?: OmikujiPick | null }) {
   const phase = state?.phase;
   const locked = phase === 'shaking';
   const played = useRef(false);
@@ -83,9 +84,11 @@ export function OmikujiDraw({ state, onShake, onClose }: { state: OmikujiState |
             {state?.phase === 'result' && (() => { const b = blessingFor(state.title); return <div className="mt-3 border-t border-dashed border-primary/40 pt-3"><p className="text-sm font-bold">{b.ja}</p><p className="mt-1 text-xs">{b.zh}</p></div>; })()}
             <p className="mt-2 text-xs text-muted-foreground">{state && "detail" in state && state.detail}</p>
           </div>
+          {pick && <div className="mx-auto mt-3 flex max-w-[16rem] items-center gap-3 rounded-lg border border-border bg-muted p-2 text-left"><img src={pick.image} alt="" className="h-12 w-12 shrink-0 rounded object-cover" /><div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-secondary-foreground">今日の開運ガチャ</p><p className="line-clamp-2 text-xs font-bold leading-tight">{pick.title}</p></div></div>}
         </>}
         {phase === 'error' && <p className="text-sm text-muted-foreground">{state && "detail" in state && state.detail}</p>}
-        {(phase === 'result' || phase === 'error') && <Button className="mt-4 w-full" onClick={onClose}>收下・回到票夾</Button>}
+        {phase === 'result' && pick && <Button className="mt-4 w-full" onClick={() => { onClose(); pick.onGo(); }}>去轉今日開運機台</Button>}
+        {(phase === 'result' || phase === 'error') && <Button variant={phase === 'result' && pick ? 'outline' : 'default'} className={`${phase === 'result' && pick ? 'mt-2' : 'mt-4'} w-full`} onClick={onClose}>收下・回到票夾</Button>}
       </div>
     </DialogContent>
   </Dialog>;
