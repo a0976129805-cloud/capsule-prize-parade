@@ -76,7 +76,7 @@ export function PromoRedeemForm({ autoFocus = false }: { autoFocus?: boolean }) 
               <p className="mt-2 text-xs text-muted-foreground">有效至 {new Date(redeemed.expires_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}（台灣時間）</p>
             </div>
             <p className="text-center text-xs text-muted-foreground">結帳時可選用，每筆訂單限用一張。</p>
-            <Button className="w-full" onClick={() => { setRedeemed(null); void navigate({ to: '/machines' }); }}>去逛扭蛋機</Button>
+            <Button className="w-full" onClick={() => { setRedeemed(null); void navigate({ to: '/machines', search: { q: '' } }); }}>去逛扭蛋機</Button>
             <Button variant="outline" className="w-full" onClick={() => setRedeemed(null)}>繼續逛逛</Button>
           </DialogContent>
         )}

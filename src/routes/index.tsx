@@ -89,7 +89,7 @@ export function Storefront({ initialTab = "home", initialQuery = "" }: { initial
   const [couponChoice,setCouponChoice]=useState('auto');
   const go = (next: 'home' | 'machines' | 'groups' | 'vault' | 'orders' | 'sets' | 'admin' | 'coupons') => {
     setSelectedId(null); setTab(next);
-    if (next === 'machines') void navigate({ to: '/machines', search: query.trim() ? { q: query.trim() } : {} });
+    if (next === 'machines') void navigate({ to: '/machines', search: { q: query.trim() } });
     else if (next !== 'admin') void navigate({ to: next === 'home' ? '/' : next === 'groups' ? '/group-buys' : next === 'sets' ? '/sets' : next === 'vault' ? '/vault' : next === 'coupons' ? '/coupons' : '/orders' });
   };
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -130,14 +130,14 @@ export function Storefront({ initialTab = "home", initialQuery = "" }: { initial
   const [query, setQuery] = useState(initialQuery);
   const updateMachineQuery = (value: string) => {
     setQuery(value);
-    if (tab === 'machines') void navigate({ to: '/machines', search: value.trim() ? { q: value } : {}, replace: true });
+    if (tab === 'machines') void navigate({ to: '/machines', search: { q: value }, replace: true });
   };
   const searchFromHome = (value: string) => {
     const keyword = value.trim();
     setTag('all');
     setQuery(keyword);
     setSelectedId(null);
-    void navigate({ to: '/machines', search: keyword ? { q: keyword } : {} });
+    void navigate({ to: '/machines', search: { q: keyword } });
   };
   const qc = useQueryClient();
   const refreshAlbum = () => { void qc.invalidateQueries({ queryKey: ['album'] }); };
