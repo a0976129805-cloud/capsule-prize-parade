@@ -5,7 +5,7 @@ import { trustArt } from './trust-art';
 import { TrustInfoDialog, type TrustTopic } from './trust-info';
 import shrine from '@/assets/omikuji-shrine.jpg';
 import type { Machine } from '@/lib/gacha.functions';
-import { FREE_SHIP_AMOUNT, SHIP_FEE } from '@/lib/shipping';
+import { FREE_SHIP_AMOUNT, SHIP_FEE, shippingProgress } from '@/lib/shipping';
 import boutique from '@/assets/gacha-boutique.jpg';
 import { FulfillmentBadge } from './fulfillment';
 
@@ -44,12 +44,18 @@ export function BannerCarousel({ images, onSets, onGuide }: { images: string[]; 
   </section>;
 }
 
-export function ShippingProgress({ subtotal }: { subtotal: number }) {
-  const left = Math.max(0, FREE_SHIP_AMOUNT - subtotal);
+export function ShippingProgress({ subtotal, onContinue }: { subtotal: number; onContinue?: () => void }) {
+  const progress = shippingProgress(subtotal);
   return <section className="shipping-progress py-3" aria-label="免運進度">
-    <div className="mb-2 flex items-center gap-2 text-sm font-bold"><Truck className="h-4 w-4 text-secondary-foreground" />{left ? <>還差 <span className="text-primary">NT${left.toLocaleString()}</span> 即享免運</> : <span className="text-secondary-foreground">已達滿千免運！</span>}</div>
-    <progress className="boutique-progress h-2 w-full" max={FREE_SHIP_AMOUNT} value={Math.min(subtotal, FREE_SHIP_AMOUNT)} aria-label="商品金額免運進度" />
-    <p className="mt-1 text-[11px] text-muted-foreground">商品 NT${subtotal.toLocaleString()}・滿 NT$1,000 免運，未滿 NT${SHIP_FEE}</p>
+    <div className="mb-2 flex items-center gap-2 text-sm font-bold">
+      <Truck className="h-4 w-4 shrink-0 text-secondary-foreground" />
+      {subtotal <= 0 ? <span>商品滿 NT${FREE_SHIP_AMOUNT.toLocaleString()} 免運</span> : progress.remaining ? <>還差 <span className="text-primary">NT${progress.remaining.toLocaleString()}</span> 即享免運</> : <span className="text-secondary-foreground">已達滿千免運！</span>}
+    </div>
+    <progress className="boutique-progress h-2 w-full" max={FREE_SHIP_AMOUNT} value={progress.value} aria-label="商品金額免運進度" />
+    <div className="mt-2 flex items-center justify-between gap-3">
+      <p className="text-[11px] text-muted-foreground">商品 NT${subtotal.toLocaleString()}・未滿免運門檻運費 NT${SHIP_FEE}</p>
+      {onContinue && <Button type="button" variant="outline" size="sm" className="h-8 shrink-0 rounded-full px-3 text-xs" onClick={onContinue}>再挑扭蛋</Button>}
+    </div>
   </section>;
 }
 
