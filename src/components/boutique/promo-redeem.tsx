@@ -62,7 +62,7 @@ export function PromoRedeemForm({ autoFocus = false }: { autoFocus?: boolean }) 
           </Button>
         </form>
         <p className="text-xs text-muted-foreground">不分大小寫・需登入會員・每組代碼每位會員限領一次</p>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {error && <div className="space-y-1"><p role="alert" className="text-sm text-destructive">{error}</p>{error.includes('登入') && <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => void navigate({ to: '/auth' })}>前往會員登入</Button>}</div>}
       </div>
       <Dialog open={!!redeemed} onOpenChange={(open) => { if (!open) setRedeemed(null); }}>
         {redeemed && (
