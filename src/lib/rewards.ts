@@ -16,3 +16,9 @@ export type Coupon = {id:string;name:string;amount:number;minimum:number;expires
 export function usableCoupon(c:Coupon,subtotal:number,now=Date.now()) {return !c.used_order_id && new Date(c.expires_at).getTime()>now && subtotal>=c.minimum;}
 export function couponDiscount(c:Coupon|undefined,subtotal:number,now=Date.now()) {return c && usableCoupon(c,subtotal,now)?Math.min(c.amount,subtotal):0;}
 export function bestCoupon(coupons:Coupon[],subtotal:number) {return coupons.filter(c=>usableCoupon(c,subtotal)).sort((a,b)=>b.amount-a.amount || a.expires_at.localeCompare(b.expires_at))[0];}
+/** Next genuinely owned coupon threshold, used only as optional checkout guidance. */
+export function nextCoupon(coupons:Coupon[],subtotal:number,now=Date.now()) {
+ return coupons
+  .filter(c=>!c.used_order_id&&new Date(c.expires_at).getTime()>now&&c.minimum>subtotal)
+  .sort((a,b)=>a.minimum-b.minimum||b.amount-a.amount||a.expires_at.localeCompare(b.expires_at))[0];
+}

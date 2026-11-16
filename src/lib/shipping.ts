@@ -14,6 +14,15 @@ export function orderTotal(prices: number[]) {
   return { subtotal: sub, fee, total: sub + fee };
 }
 
+export function shippingProgress(subtotal: number) {
+  const amount = Math.max(0, Number(subtotal) || 0);
+  return {
+    remaining: Math.max(0, FREE_SHIP_AMOUNT - amount),
+    value: Math.min(amount, FREE_SHIP_AMOUNT),
+    reached: amount >= FREE_SHIP_AMOUNT,
+  };
+}
+
 export function expiresAt(drawnAt: string | Date) {
   return new Date(new Date(drawnAt).getTime() + VAULT_MS);
 }
