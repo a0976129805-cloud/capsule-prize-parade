@@ -12,5 +12,5 @@ export const Route = createFileRoute('/machines')({
 
 function MachinesPage() {
   const { q } = Route.useSearch();
-  return <Storefront initialTab="machines" initialQuery={q} />;
+  return <Storefront initialTab="machines" initialQuery={q ?? ''} />;
 }
