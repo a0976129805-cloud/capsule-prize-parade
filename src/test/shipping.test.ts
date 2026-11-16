@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { orderTotal, isExpired } from "@/lib/shipping";
+import { orderTotal, isExpired, shippingProgress } from "@/lib/shipping";
 import { buildMyshipRows } from "@/lib/exportMyship";
 
 describe("shipping rules", () => {
@@ -7,6 +7,11 @@ describe("shipping rules", () => {
   it("is free at exactly NT$1,000 including a complete set", () => expect(orderTotal([1000])).toEqual({ subtotal: 1000, fee: 0, total: 1000 }));
   it("charges NT$38 at NT$999", () => expect(orderTotal([999]).fee).toBe(38));
   it("is free above NT$1,000", () => expect(orderTotal([650, 450]).fee).toBe(0));
+  it("湊單進度在 NT$999 顯示差 NT$1，達 NT$1,000 後不再增加", () => {
+    expect(shippingProgress(999)).toEqual({ remaining: 1, value: 999, reached: false });
+    expect(shippingProgress(1000)).toEqual({ remaining: 0, value: 1000, reached: true });
+    expect(shippingProgress(1200)).toEqual({ remaining: 0, value: 1000, reached: true });
+  });
   it("releases vault items after 24 hours", () => {
     const now = new Date("2026-01-02T00:00:00Z");
     expect(isExpired("2026-01-01T00:00:01Z", now)).toBe(false);

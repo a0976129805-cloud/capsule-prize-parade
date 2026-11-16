@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {emptyRewards,newcomerPreview,rewardSettingsSchema,couponDiscount,bestCoupon,usableCoupon,type Coupon} from '@/lib/rewards';
+import {emptyRewards,newcomerPreview,rewardSettingsSchema,couponDiscount,bestCoupon,nextCoupon,usableCoupon,type Coupon} from '@/lib/rewards';
 import {orderTotal} from '@/lib/shipping';
 import {buildMyshipRows} from '@/lib/exportMyship';
 import {emptyPromoCode,promoCodeSchema} from '@/lib/promo-codes';
@@ -12,6 +12,7 @@ describe('會員優惠規則',()=>{
  it('需滿額才折抵',()=>{expect(couponDiscount(c,299)).toBe(0);expect(couponDiscount(c,300)).toBe(20);});
  it('只選一張最大折扣，不能疊加',()=>{const selected=bestCoupon([c,{...c,id:'two',amount:50}],500);expect(selected?.id).toBe('two');expect(couponDiscount(selected,500)).toBe(50);});
  it('已使用券不可再次使用',()=>expect(usableCoupon({...c,used_order_id:'ORD-1'},500)).toBe(false));
+ it('湊單提示只推薦會員實際持有且未達門檻的最近一張券',()=>{expect(nextCoupon([{...c,id:'used',used_order_id:'ORD-1'},{...c,id:'far',minimum:1000},{...c,id:'near',minimum:500}],300)?.id).toBe('near');expect(nextCoupon([c],300)?.id).toBe('one');expect(nextCoupon([c],500)).toBeUndefined();});
  it('到期當下不可使用',()=>expect(usableCoupon(c,500,new Date(c.expires_at).getTime())).toBe(false));
  it('啟用優惠需設定正折扣',()=>expect(rewardSettingsSchema.safeParse({...emptyRewards,newcomer:{...emptyRewards.newcomer,enabled:true}}).success).toBe(false));
  it('每日機率必須合计100',()=>expect(rewardSettingsSchema.safeParse({...emptyRewards,daily:{enabled:true,options:emptyRewards.daily.options.map(o=>({...o,amount:20,minimum:300,weight:10}))}}).success).toBe(false));
