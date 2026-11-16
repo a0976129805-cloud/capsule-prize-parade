@@ -405,7 +405,20 @@ export function Storefront({ initialTab = "home", initialQuery = "" }: { initial
               {oldest && <p className="mt-1 text-xs font-bold text-destructive">⏰ 暫存剩餘 {timeLeft(oldest)}（以最早抽到的商品計算）</p>}
             </div>
             <Rules />
-            {vault.length === 0 ? <Empty text="倉庫空空的，快去轉蛋吧！" /> : (
+            {vault.length === 0 ? <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center">
+                <p className="text-4xl" aria-hidden>🐾</p>
+                <p className="mt-2 font-bold">倉庫還空空的</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">抽到的扭蛋會先放這裡，免費保留 {VAULT_HOURS} 小時，可以慢慢湊單一起寄。</p>
+                <ul className="mx-auto mt-3 max-w-xs space-y-1 text-left text-xs text-muted-foreground">
+                  <li>・日本正版扭蛋，全新未拆內袋</li>
+                  <li>・7-11 賣貨便整單寄送</li>
+                  <li>・商品滿 NT$1,000 免運</li>
+                </ul>
+                <div className="mt-4 grid gap-2">
+                  <Button onClick={() => go('machines')}>去逛扭蛋機</Button>
+                  <Button variant="outline" onClick={() => go('sets')}>看整套專區</Button>
+                </div>
+              </div> : (
               <>
                 <DispatchNotice items={vault} />
                 <VaultPrizes items={vault} />
