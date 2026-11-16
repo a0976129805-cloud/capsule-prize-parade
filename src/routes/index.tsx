@@ -36,7 +36,9 @@ import { RewardSettingsForm } from '@/components/boutique/reward-settings';
 import { PromoCodeAdmin } from '@/components/boutique/promo-code-admin';
 import { useMember } from '@/components/boutique/member-session';
 import { getMemberContact } from '@/lib/member-contact.functions';
-import { bestCoupon, couponDiscount, usableCoupon } from '@/lib/rewards';
+import { bestCoupon, couponDiscount, nextCoupon, usableCoupon } from '@/lib/rewards';
+import { HomeDiscovery } from '@/components/boutique/home-discovery';
+import { MachineSearch } from '@/components/boutique/machine-search';
 import catLogo from "@/assets/cat-logo.png";
 import { GroupBuyBadge, GroupBuyBoard, GroupBuyAdmin } from "@/components/boutique/group-buy";
 import { SalesDashboard } from '@/components/boutique/sales-dashboard';
@@ -79,7 +81,7 @@ function getDeviceId() {
   return id;
 }
 
-export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "machines" | "groups" | "vault" | "orders" | "sets" | "coupons" }) {
+export function Storefront({ initialTab = "home", initialQuery = "" }: { initialTab?: "home" | "machines" | "groups" | "vault" | "orders" | "sets" | "coupons"; initialQuery?: string }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"home" | "machines" | "groups" | "vault" | "orders" | "admin" | "sets" | "coupons">(initialTab);
   const member = useMember();
@@ -87,7 +89,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
   const [couponChoice,setCouponChoice]=useState('auto');
   const go = (next: 'home' | 'machines' | 'groups' | 'vault' | 'orders' | 'sets' | 'admin' | 'coupons') => {
     setSelectedId(null); setTab(next);
-    if (next !== 'admin') navigate({ to: next === 'home' ? '/' : next === 'machines' ? '/machines' : next === 'groups' ? '/group-buys' : next === 'sets' ? '/sets' : next === 'vault' ? '/vault' : next === 'coupons' ? '/coupons' : '/orders' });
+    if (next === 'machines') void navigate({ to: '/machines', search: query.trim() ? { q: query.trim() } : {} });
+    else if (next !== 'admin') void navigate({ to: next === 'home' ? '/' : next === 'groups' ? '/group-buys' : next === 'sets' ? '/sets' : next === 'vault' ? '/vault' : next === 'coupons' ? '/coupons' : '/orders' });
   };
   const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -124,7 +127,18 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
   const [deviceId, setDeviceId] = useState<string | null>(null);
   useEffect(() => { setDeviceId(getDeviceId()); }, []);
   const [tag, setTag] = useState<MachineFilter>('all');
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
+  const updateMachineQuery = (value: string) => {
+    setQuery(value);
+    if (tab === 'machines') void navigate({ to: '/machines', search: value.trim() ? { q: value } : {}, replace: true });
+  };
+  const searchFromHome = (value: string) => {
+    const keyword = value.trim();
+    setTag('all');
+    setQuery(keyword);
+    setSelectedId(null);
+    void navigate({ to: '/machines', search: keyword ? { q: keyword } : {} });
+  };
   const qc = useQueryClient();
   const refreshAlbum = () => { void qc.invalidateQueries({ queryKey: ['album'] }); };
   const [shareItems, setShareItems] = useState<VaultItem[] | null>(null);
@@ -181,6 +195,9 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
   useEffect(() => {
     setTab(initialTab); setSelectedId(null);
   }, [initialTab]);
+  useEffect(() => {
+    if (initialTab === 'machines') setQuery(initialQuery);
+  }, [initialTab, initialQuery]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2500); };
   useEffect(() => { if (tab !== 'machines' || !machines.length) return; const id = sessionStorage.getItem('open-machine'); if (!id) return; sessionStorage.removeItem('open-machine'); if (machines.some(m => m.id === id)) setSelectedId(id); }, [tab, machines]);
@@ -190,6 +207,8 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
   const coupons=member.userId?(wallet.data?.coupons??[]):[];
   const chosenCoupon=couponChoice==='auto'?bestCoupon(coupons,sum.subtotal):coupons.find(c=>c.id===couponChoice);
   const discount=couponDiscount(chosenCoupon,sum.subtotal);
+  const upcomingCoupon=member.userId?nextCoupon(coupons,sum.subtotal):undefined;
+  const couponGuidance=discount>0&&chosenCoupon?`本單已使用「${chosenCoupon.name}」折抵 NT$${discount}`:upcomingCoupon?`再 NT$${(upcomingCoupon.minimum-sum.subtotal).toLocaleString()} 可用「${upcomingCoupon.name}」折 NT$${upcomingCoupon.amount}`:'';
   const checkoutTotal=sum.total-discount;
   const oldest = vault[0]?.drawnAt;
 
@@ -285,13 +304,13 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
             {tab === "home" ? <>
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
             <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
+            <HomeDiscovery query={query} onQueryChange={setQuery} onSearch={searchFromHome} />
             <NewcomerInvite onOpen={() => go('coupons')} />
             <DrawFeed machines={machines} />
             <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のおすすめ</p><h2 className="text-lg font-bold">店長精選</h2></div><AlbumProgress deviceId={deviceId} onOpen={() => setAlbumOpen(true)} /></div>
             </> : <>
             <div className="border-b border-border pb-3"><p className="text-xs text-secondary-foreground">ガチャ売り場</p><h1 className="mt-1 text-2xl font-bold">全部扭蛋機</h1></div>
-            <label className="relative block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜尋機台或款式，例如：小狗、貓咪" aria-label="搜尋機台" className="w-full rounded-full border border-input bg-card py-2.5 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring" /></label>
-            <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4" aria-label="熱門關鍵字">{['潦草小狗','吉伊卡哇','貓咪','一番賞'].map((k) => { const on = query.trim() === k; return <button key={k} type="button" aria-pressed={on} onClick={() => setQuery(on ? '' : k)} className={`shrink-0 rounded-full border px-3 py-1 text-xs ${on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground'}`}>#{k}</button>; })}</div>
+            <MachineSearch id="machine-search" value={query} onChange={updateMachineQuery} />
             {machines.length > 0 && <div className="sticky top-[76px] z-20 -mx-4 flex gap-2 overflow-x-auto bg-background/95 px-4 py-1.5" aria-label="機台分類">{([["all", "全部"], ["stock", "台灣現貨"], ["featured", "店長主推"], ["lastone", "倒數最後賞"], ["low", "即將完售"], ["plenty", "庫存充足"], ["sets", "可整套"]] as const).map(([k, l]) => <Button key={k} aria-pressed={k === 'sets' ? undefined : tag === k} size="sm" variant={k !== "sets" && tag === k ? "default" : "outline"} className="shrink-0 rounded-full" onClick={() => k === "sets" ? go('sets') : setTag(k)}>{l}</Button>)}</div>}
             </>}
             {loading && <div className="py-8 text-center" role="status"><div className="cat-loader"><img src={catLogo} alt="" className="cat-loader-cat" /><span className="cat-loader-ball" /></div><p className="mt-2 text-sm text-muted-foreground">奶油貓正在搬機台…</p></div>}
@@ -382,7 +401,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
             <h2 className="text-lg font-bold">我的倉庫（{vault.length}）</h2>
             <Button variant="secondary" className="w-full" onClick={()=>go('coupons')}><Gift/>我的折價券・每日御神籤</Button>
             <div className="rounded-lg border border-border bg-card p-3">
-              <ShippingProgress subtotal={sum.subtotal} />
+              <ShippingProgress subtotal={sum.subtotal} onContinue={() => go('machines')} />
               {oldest && <p className="mt-1 text-xs font-bold text-destructive">⏰ 暫存剩餘 {timeLeft(oldest)}（以最早抽到的商品計算）</p>}
             </div>
             <Rules />
@@ -401,6 +420,7 @@ export function Storefront({ initialTab = "home" }: { initialTab?: "home" | "mac
                     {ship.storeCode ? <span><b>{ship.storeName}門市</b>（店號 {ship.storeCode}）<span className="block text-xs text-primary">點此更換門市</span></span> : <span className="font-bold text-primary">點此選擇 7-11 取貨門市</span>}
                   </Button>
                   {member.userId ? <label className="block text-xs">使用折價券<select className="mt-1 w-full rounded-lg border border-input bg-background p-2 text-sm" value={couponChoice} onChange={e=>setCouponChoice(e.target.value)}><option value="auto">自動選擇最優惠的一張</option><option value="none">不使用折價券</option>{coupons.filter(c=>usableCoupon(c,sum.subtotal)).map(c=><option key={c.id} value={c.id}>{c.name}・滿 {c.minimum} 折 {c.amount}</option>)}</select>{wallet.isError&&<span className="text-destructive">票夾讀取失敗，請重新整理後再使用券。</span>}</label>:<Button type="button" variant="outline" className="w-full" onClick={()=>navigate({to:'/auth'})}>會員登入・使用折價券</Button>}
+                  {couponGuidance&&<p className="rounded-lg bg-secondary px-3 py-2 text-xs font-bold text-secondary-foreground">{couponGuidance}</p>}
                   <div className="space-y-1 rounded-xl bg-muted p-3 text-sm">
                     <div className="flex justify-between"><span>扭蛋金額（{vault.length} 顆）</span><span>NT${sum.subtotal}</span></div>
                     {discount>0&&<div className="flex justify-between gap-3 text-secondary-foreground"><span className="break-words">優惠折抵（{chosenCoupon?.name}）</span><span className="shrink-0">−NT${discount}</span></div>}
