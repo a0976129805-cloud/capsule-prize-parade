@@ -29,7 +29,8 @@ export function PromoRedeemForm({ autoFocus = false }: { autoFocus?: boolean }) 
       setRedeemed(result);
       await cache.invalidateQueries({ queryKey: ['member-wallet'] });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '兌換失敗，請稍後再試');
+      const message = reason instanceof Error ? reason.message : '兌換失敗，請稍後再試';
+      setError(/unauthorized|authorization|登入/i.test(message) ? '請先登入會員，再輸入暗號領券。' : message);
     } finally {
       setBusy(false);
     }
