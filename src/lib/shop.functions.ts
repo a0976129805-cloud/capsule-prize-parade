@@ -24,6 +24,7 @@ export const adminSaveShopInfo = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireAdmin();
     const clean: Record<string, unknown> = Object.fromEntries(Object.keys(emptyShopInfo).filter((k) => k !== "banners").map((k) => [k, String((data as Record<string, unknown>)[k] ?? "").trim().slice(0, 500)]));
+    clean["announcement"] = String(data.announcement ?? "").trim().slice(0, 180);
     clean["banners"] = (Array.isArray(data.banners) ? data.banners : []).map(String).filter((u) => /^\/api\/public\/img\/[\w.-]+$/.test(u)).slice(0, 8);
     for (const k of ["lineUrl", "igUrl"]) if (clean[k] && !/^https:\/\//.test(String(clean[k]))) throw new Error("連結需以 https:// 開頭");
     const db = await admin();

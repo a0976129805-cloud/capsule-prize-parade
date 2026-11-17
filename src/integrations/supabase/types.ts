@@ -292,11 +292,13 @@ export type Database = {
           ship_email: string
           ship_name: string
           ship_phone: string
+          shipped_at: string | null
           shipping_fee: number
           status: string
           store_code: string
           store_name: string
           total: number
+          tracking_number: string
         }
         Insert: {
           coupon_id?: string | null
@@ -312,11 +314,13 @@ export type Database = {
           ship_email?: string
           ship_name: string
           ship_phone: string
+          shipped_at?: string | null
           shipping_fee?: number
           status?: string
           store_code: string
           store_name: string
           total?: number
+          tracking_number?: string
         }
         Update: {
           coupon_id?: string | null
@@ -332,11 +336,13 @@ export type Database = {
           ship_email?: string
           ship_name?: string
           ship_phone?: string
+          shipped_at?: string | null
           shipping_fee?: number
           status?: string
           store_code?: string
           store_name?: string
           total?: number
+          tracking_number?: string
         }
         Relationships: []
       }

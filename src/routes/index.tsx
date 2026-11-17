@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAdmin, unlockAdmin, lockAdmin } from "@/lib/admin-gate.functions";
 import {
-  listMachines, drawPrizes, createOrder, myOrders, myVault, adminOrders, adminSetOrderStatus, adminSaveMachine, adminDeleteMachine,
+  listMachines, drawPrizes, createOrder, myOrders, myVault, adminOrders, adminUpdateShipment, adminSaveMachine, adminDeleteMachine,
   adminGetSeller, adminSaveSeller, buySet,
   type Machine, type VaultItem, type Shipping, type Order,
 } from "@/lib/gacha.functions";
@@ -44,6 +44,10 @@ import { GroupBuyBadge, GroupBuyBoard, GroupBuyAdmin } from "@/components/boutiq
 import { SalesDashboard } from '@/components/boutique/sales-dashboard';
 import { BrandNote } from '@/components/boutique/brand-note';
 import { NewcomerInvite } from '@/components/boutique/newcomer-invite';
+import { ShopAnnouncement } from '@/components/boutique/shop-announcement';
+import { MachineShareButton } from '@/components/boutique/machine-share-button';
+import { ORDER_STATUSES } from '@/lib/order-shipping';
+import { copyText } from '@/lib/machine-share';
 import { filterMachines, dailyPick, taipeiDay, type MachineFilter } from '@/lib/machine-filters';
 import { CatAlbum, albumQueryKey } from "@/components/boutique/cat-album";
 import { cardLabel } from "@/lib/cat-cards";
@@ -71,7 +75,6 @@ export const Route = createFileRoute("/")({
   component: Storefront,
 });
 
-const ORDER_STATUSES = ["待出貨", "已出貨", "已取貨", "已取消"];
 const emptyShip: Shipping = { name: "", phone: "", email: "", storeName: "", storeCode: "" };
 const RULES = `倉庫商品免費暫存 ${VAULT_HOURS} 小時，申請出貨時須將倉內所有扭蛋一併結帳寄出，無法單獨挑選放棄。逾期未結帳的商品將自動釋回機台。為減少體積與破損，預設不附外層塑膠蛋殼，保留全新未拆內袋與原廠蛋紙（蛋殼本身即商品之款式除外）。訂單成立後依現貨／預購時程寄出，不受暫存期限影響。`;
 
@@ -81,7 +84,7 @@ function getDeviceId() {
   return id;
 }
 
-export function Storefront({ initialTab = "home", initialQuery = "" }: { initialTab?: "home" | "machines" | "groups" | "vault" | "orders" | "sets" | "coupons"; initialQuery?: string }) {
+export function Storefront({ initialTab = "home", initialQuery = "", initialMachineId = "" }: { initialTab?: "home" | "machines" | "groups" | "vault" | "orders" | "sets" | "coupons"; initialQuery?: string; initialMachineId?: string }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"home" | "machines" | "groups" | "vault" | "orders" | "admin" | "sets" | "coupons">(initialTab);
   const member = useMember();
@@ -198,6 +201,9 @@ export function Storefront({ initialTab = "home", initialQuery = "" }: { initial
   useEffect(() => {
     if (initialTab === 'machines') setQuery(initialQuery);
   }, [initialTab, initialQuery]);
+  useEffect(() => {
+    if (initialTab === 'machines' && initialMachineId && machines.some((machine) => machine.id === initialMachineId)) setSelectedId(initialMachineId);
+  }, [initialTab, initialMachineId, machines]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2500); };
   useEffect(() => { if (tab !== 'machines' || !machines.length) return; const id = sessionStorage.getItem('open-machine'); if (!id) return; sessionStorage.removeItem('open-machine'); if (machines.some(m => m.id === id)) setSelectedId(id); }, [tab, machines]);
@@ -303,6 +309,7 @@ export function Storefront({ initialTab = "home", initialQuery = "" }: { initial
           <div className="space-y-4">
             {tab === "home" ? <>
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
+            <ShopAnnouncement text={info.announcement} />
             <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
             <HomeDiscovery query={query} onQueryChange={setQuery} onSearch={searchFromHome} />
             <NewcomerInvite onOpen={() => go('coupons')} />
@@ -318,7 +325,7 @@ export function Storefront({ initialTab = "home", initialQuery = "" }: { initial
             {!loading && !loadError && machines.length === 0 && <Empty text="店長正在準備新機台" />}
             <div className="grid grid-cols-2 gap-3">
             {visibleMachines.map((m) => (
-              <Button variant="bare" size="bare" key={m.id} onClick={() => setSelectedId(m.id)} className="flex min-w-0 flex-col items-stretch overflow-hidden whitespace-normal rounded-lg border border-border bg-card text-left shadow-sm transition active:scale-[.97]">
+              <Button variant="bare" size="bare" key={m.id} onClick={() => { setSelectedId(m.id); if (tab === 'machines') void navigate({ to: '/machines', search: { q: query, machine: m.id } }); }} className="flex min-w-0 flex-col items-stretch overflow-hidden whitespace-normal rounded-lg border border-border bg-card text-left shadow-sm transition active:scale-[.97]">
                 <div className="relative aspect-square bg-muted">
                   <img src={m.coverImage} alt={m.title} loading="lazy" className="h-full w-full object-cover" />
                   <span className={`absolute left-1.5 top-1.5 max-w-[calc(100%-0.75rem)] truncate rounded-full px-2 py-0.5 text-[10px] font-bold ${m.totalStock > 0 && m.totalStock <= 3 ? 'bg-destructive text-destructive-foreground motion-safe:animate-pulse' : 'bg-primary text-primary-foreground'}`}>{m.totalStock <= 0 ? "完売御礼" : m.totalStock <= 3 ? "あとわずか・即將完售" : m.totalStock <= 5 ? "残りわずか" : m.status}</span>
@@ -351,7 +358,7 @@ export function Storefront({ initialTab = "home", initialQuery = "" }: { initial
 
         {(tab === "home" || tab === "machines") && selected && (
           <div className="space-y-4">
-            <Button variant="bare" size="bare" onClick={() => setSelectedId(null)} className="flex items-center gap-1 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" /> 返回列表</Button>
+            <Button variant="bare" size="bare" onClick={() => { setSelectedId(null); if (tab === 'machines') void navigate({ to: '/machines', search: { q: query } }); }} className="flex items-center gap-1 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" /> 返回列表</Button>
             <div className="overflow-hidden rounded-lg border border-border bg-card">
               <img src={selected.coverImage} alt={selected.title} className="aspect-[16/9] w-full object-cover" />
               <div className="p-4">
@@ -362,6 +369,7 @@ export function Storefront({ initialTab = "home", initialQuery = "" }: { initial
               </div>
             </div>
             <DispatchNotice items={[selected]} />
+            <MachineShareButton machine={selected} onResult={flash} />
             <div className="pb-2 pt-4">
               {selected.totalStock <= 0 ? (
                 <p className="w-full rounded-full bg-muted py-3 text-center font-bold text-muted-foreground">完売御礼・已完售</p>
@@ -503,7 +511,7 @@ function Empty({ text }: { text: string }) {
 
 function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4 text-sm">
+    <div data-order-id={o.id} className="rounded-lg border border-border bg-card p-4 text-sm">
       <div className="flex flex-wrap justify-between gap-2"><span className="break-all font-bold">{o.id}</span><span className={`st-${o.status} rounded-full px-2.5 py-0.5 text-xs font-bold`}>{o.status}</span></div>
       <p className="text-xs text-muted-foreground">{o.createdAt}・總金額 NT${o.total}</p>
       {!!o.discount&&<p className="mt-1 text-xs text-secondary-foreground">{o.couponName}・已折抵 NT${o.discount}</p>}
@@ -511,8 +519,56 @@ function OrderCard({ o, children }: { o: Order; children?: React.ReactNode }) {
       <ul className="mt-2 divide-y divide-border rounded-xl bg-muted/60 px-3">
         {groupItems(o.items).map((g) => <li key={g.name} className="flex justify-between gap-2 py-1.5"><span>{g.name}</span><span className="shrink-0 font-bold">- {g.qty} 顆</span></li>)}
       </ul>
-      <p className="mt-1 text-xs text-muted-foreground">7-11 {o.shipping.storeName}（{o.shipping.storeCode}）・{o.shipping.name} {o.shipping.phone}</p>
+      <OrderTracking order={o} />
+      <p className="mt-2 text-xs text-muted-foreground">7-11 {o.shipping.storeName}（{o.shipping.storeCode}）・{o.shipping.name} {o.shipping.phone}</p>
       {children}
+    </div>
+  );
+}
+
+function OrderTracking({ order }: { order: Order }) {
+  const [copied, setCopied] = useState(false);
+  const steps = ['待出貨', '已出貨', '已取貨'] as const;
+  const current = steps.indexOf(order.status as (typeof steps)[number]);
+  const copy = async () => {
+    if (!order.trackingNumber) return;
+    try { await copyText(order.trackingNumber); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } catch { setCopied(false); }
+  };
+  return (
+    <section aria-label="賣貨便出貨進度" className="mt-3 rounded-xl border border-border bg-background p-3">
+      {order.status === '已取消' ? <p className="text-xs font-bold text-muted-foreground">此訂單已取消，如有疑問請聯繫店長。</p> : <>
+        <ol className="grid grid-cols-3 gap-1" aria-label="訂單狀態">
+          {steps.map((step, index) => <li key={step} className={`text-center text-[11px] font-bold ${index <= current ? 'text-primary' : 'text-muted-foreground'}`}><span className={`mx-auto mb-1 flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${index <= current ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-muted'}`}>{index < current ? <Check className="h-3 w-3" aria-hidden="true" /> : index + 1}</span>{step}</li>)}
+        </ol>
+        {order.trackingNumber ? <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-secondary/60 px-3 py-2"><div className="min-w-0"><p className="text-[10px] font-bold text-secondary-foreground">7-11 賣貨便物流編號</p><p className="break-all font-mono text-sm font-bold tracking-wide">{order.trackingNumber}</p>{order.shippedAt && <p className="mt-0.5 text-[10px] text-muted-foreground">店長登錄出貨：{order.shippedAt}</p>}</div><Button type="button" variant="outline" size="sm" className="shrink-0" onClick={copy}>{copied ? '已複製' : '複製單號'}</Button></div> : <p className="mt-3 text-xs leading-relaxed text-muted-foreground">店長整理商品並實際寄出後，會在這裡填上物流編號。</p>}
+        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">進度由店長手動更新；包裹到店與取貨期限以 7-11 實際通知為準。</p>
+      </>}
+    </section>
+  );
+}
+
+function AdminOrderControls({ order, onSaved, flash }: { order: Order; onSaved: () => void; flash: (message: string) => void }) {
+  const updateShipment = useServerFn(adminUpdateShipment);
+  const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber ?? '');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setTrackingNumber(order.trackingNumber ?? ''), [order.trackingNumber]);
+  const save = async (status: string) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await updateShipment({ data: { id: order.id, status, trackingNumber } });
+      flash(status === '已出貨' ? '已儲存物流編號並更新為已出貨' : `訂單已更新為${status}`);
+      onSaved();
+    } catch (error) {
+      flash(error instanceof Error ? error.message : '更新失敗，請再試一次');
+    } finally { setBusy(false); }
+  };
+  return (
+    <div className="mt-3 space-y-2 border-t border-border pt-3">
+      <label className="block text-xs font-bold">7-11 賣貨便物流編號<input aria-label={`訂單 ${order.id} 物流編號`} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm uppercase" maxLength={40} placeholder="實際寄出後填寫" value={trackingNumber} onChange={(event) => setTrackingNumber(event.target.value)} /></label>
+      <Button type="button" size="sm" disabled={busy || !trackingNumber.trim()} onClick={() => save('已出貨')} className="w-full rounded-full"><Truck aria-hidden="true" />儲存單號並標為已出貨</Button>
+      <div className="flex flex-wrap gap-1">{ORDER_STATUSES.map((status) => <Button type="button" variant="bare" size="bare" disabled={busy} key={status} onClick={() => save(status)} className={`rounded-full px-3 py-1 text-xs font-bold ${order.status === status ? `st-${status}` : 'bg-muted text-muted-foreground'}`}>{status}</Button>)}</div>
+      <p className="text-[10px] text-muted-foreground">手動記錄，不會自動建立賣貨便物流單或同步配送狀態。</p>
     </div>
   );
 }
@@ -524,7 +580,6 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
   const [ostat, setOstat] = useState("待出貨");
   const [fulfillmentFilter, setFulfillmentFilter] = useState("all");
   const getOrders = useServerFn(adminOrders);
-  const setStatus = useServerFn(adminSetOrderStatus);
   const saveM = useServerFn(adminSaveMachine);
   const delM = useServerFn(adminDeleteMachine);
   const getSeller = useServerFn(adminGetSeller);
@@ -621,12 +676,7 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
           <label className="block text-xs">出貨類型<select className={field} value={fulfillmentFilter} onChange={e => setFulfillmentFilter(e.target.value)}><option value="all">全部供貨方式</option><option value="stock">純現貨單</option><option value="preorder">含預購單</option></select></label>
           {(() => { const list = orders.filter(o => (ostat === "全部" || o.status === ostat) && (fulfillmentFilter === "all" || (fulfillmentFilter === "preorder" ? o.hasPreorder : !o.hasPreorder))); return list.length === 0 ? <Empty text={`沒有「${ostat}」訂單`} /> : list.map((o) => (
             <OrderCard key={o.id} o={o}>
-              <div className="mt-3 flex flex-wrap gap-1">
-                {ORDER_STATUSES.map((s) => (
-                  <Button variant="bare" size="bare" key={s} onClick={async () => { setOrders((p) => p.map((x) => (x.id === o.id ? { ...x, status: s } : x))); await setStatus({ data: { id: o.id, status: s } }).catch(() => flash("更新失敗")); }}
-                    className={`rounded-full px-3 py-1 text-xs font-bold ${o.status === s ? `st-${s}` : "bg-muted text-muted-foreground"}`}>{s}</Button>
-                ))}
-              </div>
+              <AdminOrderControls order={o} onSaved={() => { void loadOrders(); }} flash={flash} />
             </OrderCard>
           )); })()}
         </>
@@ -804,7 +854,7 @@ function ShopInfoForm({ flash }: { flash: (m: string) => void }) {
   const [s, setS] = useState<ShopInfo>(emptyShopInfo);
   useEffect(() => { get().then(setS).catch(() => flash("讀取失敗")); }, []);
   const field = "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
-  const F: [Exclude<keyof ShopInfo, "banners">, string][] = [["lineUrl", "LINE 客服連結（可使用個人帳號）"], ["igUrl", "Instagram 連結（https://instagram.com/...）"], ["serviceHours", "客服時間（例：每日 10:00–22:00）"], ["contactEmail", "客服 Email"]];
+  const F: [Exclude<keyof ShopInfo, "banners" | "announcement">, string][] = [["lineUrl", "LINE 客服連結（可使用個人帳號）"], ["igUrl", "Instagram 連結（https://instagram.com/...）"], ["serviceHours", "客服時間（例：每日 10:00–22:00）"], ["contactEmail", "客服 Email"]];
   return (
     <form className="space-y-2 rounded-lg border border-border bg-card p-4" onSubmit={async (e) => {
       e.preventDefault();
@@ -816,6 +866,7 @@ function ShopInfoForm({ flash }: { flash: (m: string) => void }) {
         {(s.banners || []).length < 8 && <ImageUpload label="新增輪播照片" flash={flash} onDone={(url) => setS((p) => ({ ...p, banners: [...(p.banners || []), url].slice(0, 8) }))} />}
         <p className="text-[10px] text-muted-foreground">建議橫式 2:1 圖片；全部移除時顯示預設宣導。修改後請按儲存。</p>
       </div>
+      <label className="block text-xs">首頁店長採購／出貨近況（留空隱藏，最多 180 字）<textarea rows={4} maxLength={180} className={field} placeholder="例：本週在東京採購，預計 11/20 回台後陸續整理寄出。" value={s.announcement} onChange={(e) => setS({ ...s, announcement: e.target.value })} /><span className="mt-1 block text-[10px] text-muted-foreground">只填寫確定的行程；這裡不會自動同步航班或物流。</span></label>
       <label className="block text-xs">跑馬燈公告<textarea rows={3} className={field} value={s.marquee} onChange={(e) => setS({ ...s, marquee: e.target.value })} /></label>
       {F.map(([k, l]) => <label key={k} className="block text-xs">{l}<input className={field} value={s[k]} onChange={(e) => setS({ ...s, [k]: e.target.value })} /></label>)}
       <Button variant="bare" size="bare" className="w-full rounded-full bg-primary py-2.5 font-bold text-primary-foreground">儲存</Button>

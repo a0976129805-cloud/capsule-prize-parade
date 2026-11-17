@@ -5,6 +5,7 @@ import { emptySeller, type Seller } from "@/lib/export711";
 import { validateMachineOrder } from '@/lib/machine-order';
 import { rollCards } from '@/lib/cat-cards';
 import { validDispatchDate, type Fulfillment } from '@/lib/fulfillment';
+import { cleanTrackingNumber, validateShipment } from '@/lib/order-shipping';
 
 async function optionalMember(db: Awaited<ReturnType<typeof admin>>) {
   const bearer = getRequestHeader('authorization');
@@ -19,7 +20,7 @@ export type Item = { id: string; name: string; image: string; stock: number };
 export type Machine = Fulfillment & { id: string; title: string; price: number; totalStock: number; setPrice: number; coverImage: string; status: string; items: Item[]; lastOneName?: string; lastOneImage?: string; lastOneAwarded?: boolean };
 export type VaultItem = Fulfillment & { vaultId: string; id: string; name: string; image: string; machineTitle: string; drawnAt: string; price: number; isLastOne?: boolean };
 export type Shipping = { name: string; phone: string; email: string; storeName: string; storeCode: string };
-export type Order = { id: string; items: VaultItem[]; shipping: Shipping; total: number; fee: number; count: number; createdAt: string; status: string; discount?: number; couponName?: string; hasPreorder?: boolean; dispatchDate?: string | null };
+export type Order = { id: string; items: VaultItem[]; shipping: Shipping; total: number; fee: number; count: number; createdAt: string; status: string; discount?: number; couponName?: string; hasPreorder?: boolean; dispatchDate?: string | null; trackingNumber?: string; shippedAt?: string | null };
 
 const admin = () => import("@/integrations/supabase/client.server").then((m) => m.supabaseAdmin);
 const dev = (d: unknown) => String(d ?? "").slice(0, 80);
@@ -110,10 +111,12 @@ export const createOrder = createServerFn({ method: "POST" })
     return result as {id:string;total:number;discount:number};
   });
 
-type ORow = { id: string; items: unknown; ship_name: string; ship_phone: string; ship_email: string; store_name: string; store_code: string; total: number; shipping_fee: number; item_count: number; created_at: string; status: string; discount?: number; coupon_name?: string; has_preorder?: boolean; dispatch_date?: string | null };
+type ORow = { id: string; items: unknown; ship_name: string; ship_phone: string; ship_email: string; store_name: string; store_code: string; total: number; shipping_fee: number; item_count: number; created_at: string; status: string; discount?: number; coupon_name?: string; has_preorder?: boolean; dispatch_date?: string | null; tracking_number?: string; shipped_at?: string | null };
 const toOrder = (o: ORow): Order => ({
   id: o.id, items: o.items as VaultItem[], total: o.total, fee: o.shipping_fee, count: o.item_count || (o.items as unknown[]).length, status: o.status, discount:o.discount??0,couponName:o.coupon_name??'',
   hasPreorder: o.has_preorder ?? false, dispatchDate: o.dispatch_date ?? null,
+  trackingNumber: o.tracking_number ?? '',
+  shippedAt: o.shipped_at ? new Date(o.shipped_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }) : null,
   createdAt: new Date(o.created_at).toLocaleString("zh-TW", { timeZone: "Asia/Taipei" }),
   shipping: { name: o.ship_name, phone: o.ship_phone, email: o.ship_email, storeName: o.store_name, storeCode: o.store_code },
 });
@@ -137,12 +140,19 @@ export const adminOrders = createServerFn({ method: "GET" }).handler(async () =>
   return (rows ?? []).map(toOrder);
 });
 
-export const adminSetOrderStatus = createServerFn({ method: "POST" })
-  .validator((d: { id: string; status: string }) => d)
+export const adminUpdateShipment = createServerFn({ method: "POST" })
+  .validator((d: { id: string; status: string; trackingNumber?: string }) => d)
   .handler(async ({ data }) => {
     await requireAdmin();
     const db = await admin();
-    await db.from("orders").update({ status: data.status }).eq("id", data.id);
+    const id = String(data.id).slice(0, 100);
+    const { data: existing, error: readError } = await db.from('orders').select('tracking_number, shipped_at').eq('id', id).maybeSingle();
+    if (readError) throw new Error('讀取訂單失敗');
+    if (!existing) throw new Error('找不到訂單');
+    const trackingNumber = validateShipment(data.status, cleanTrackingNumber(data.trackingNumber) || existing.tracking_number || '');
+    const shippedAt = data.status === '待出貨' ? null : data.status === '已出貨' ? (existing.shipped_at ?? new Date().toISOString()) : existing.shipped_at;
+    const { error } = await db.from('orders').update({ status: data.status, tracking_number: trackingNumber, shipped_at: shippedAt }).eq('id', id);
+    if (error) throw new Error('更新出貨資料失敗');
     return { ok: true };
   });
 
