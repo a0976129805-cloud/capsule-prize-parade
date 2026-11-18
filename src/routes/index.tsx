@@ -26,7 +26,7 @@ import { PrizeGallery } from '@/components/boutique/prize-gallery';
 import { DrawResultDialog } from '@/components/boutique/draw-result-dialog';
 import { AlbumProgress } from '@/components/boutique/album-progress';
 import { FulfillmentBadge, DispatchNotice } from '@/components/boutique/fulfillment';
-import { dispatchSummary, preorderConfirmed, validDispatchDate } from '@/lib/fulfillment';
+import { dispatchSummary, formatDispatchDate, preorderConfirmed, validDispatchDate } from '@/lib/fulfillment';
 import { VaultPrizes } from '@/components/boutique/vault-prizes';
 import { MemberDrawPrompt, OfficialStoreLookup, StorefrontFaq } from '@/components/boutique/first-visit';
 import { canSubmitCheckout, PICKUP_DAYS } from '@/lib/checkout-consent';
@@ -46,6 +46,7 @@ import { BrandNote } from '@/components/boutique/brand-note';
 import { NewcomerInvite } from '@/components/boutique/newcomer-invite';
 import { ShopAnnouncement } from '@/components/boutique/shop-announcement';
 import { MachineShareButton } from '@/components/boutique/machine-share-button';
+import { ContactShortcut } from '@/components/boutique/contact-shortcut';
 import { ORDER_STATUSES } from '@/lib/order-shipping';
 import { copyText } from '@/lib/machine-share';
 import { filterMachines, dailyPick, taipeiDay, type MachineFilter } from '@/lib/machine-filters';
@@ -452,7 +453,7 @@ export function Storefront({ initialTab = "home", initialQuery = "", initialMach
                   <p className="text-xs leading-relaxed text-secondary-foreground">不需先匯款。出貨申請由店長人工整理至 7-11 賣貨便，到店取貨付款；本站非 7-11 官方網站。</p>
                   <label className="flex items-start gap-2 text-xs"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" /> 我已閱讀並同意：{RULES}</label>
                   <label className="flex items-start gap-2 text-xs leading-relaxed"><input type="checkbox" required checked={pickupAgreed} onChange={(e) => setPickupAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]" /><span>我承諾於包裹到店後 {PICKUP_DAYS} 日內取貨付款，了解未取件將影響日後購買資格。</span></label>
-                  <label className="flex items-start gap-2 text-xs leading-relaxed">{dispatch.hasPreorder && <><input type="checkbox" required checked={preorderAgreed} onChange={e => setPreorderAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]" /><span>我了解本單含預購，整單預計 {dispatch.dispatchDate} 回台後統一寄出（不拆單），不是立即出貨。</span></>}</label>
+                  <label className="flex items-start gap-2 text-xs leading-relaxed">{dispatch.hasPreorder && <><input type="checkbox" required checked={preorderAgreed} onChange={e => setPreorderAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]" /><span>我了解本單含預購，整單預計 {formatDispatchDate(dispatch.dispatchDate, true)} 回台後統一寄出（不拆單），不是立即出貨。</span></>}</label>
                   <Button variant="bare" size="bare" disabled={sending || !canSubmitCheckout(agreed, pickupAgreed) || !preorderConfirmed(dispatch, preorderAgreed)} className="w-full rounded-full bg-primary py-3 font-bold text-primary-foreground disabled:opacity-50">{sending ? "送出中…" : `📦 確認整倉結帳（共 ${vault.length} 顆・NT$${checkoutTotal}）`}</Button>
                 </form>
               </>
@@ -486,6 +487,7 @@ export function Storefront({ initialTab = "home", initialQuery = "", initialMach
         </div>
       </nav>
 
+      {tab !== 'admin' && <ContactShortcut info={info} />}
       {(tab === 'home' || tab === 'machines') && !selected && <GroupBuyBadge />}
       {menu && <SideMenu info={info} onClose={() => setMenu(false)} go={(t) => { go(t); setMenu(false); }} />}
 
@@ -854,7 +856,7 @@ function ShopInfoForm({ flash }: { flash: (m: string) => void }) {
   const [s, setS] = useState<ShopInfo>(emptyShopInfo);
   useEffect(() => { get().then(setS).catch(() => flash("讀取失敗")); }, []);
   const field = "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
-  const F: [Exclude<keyof ShopInfo, "banners" | "announcement">, string][] = [["lineUrl", "LINE 客服連結（可使用個人帳號）"], ["igUrl", "Instagram 連結（https://instagram.com/...）"], ["serviceHours", "客服時間（例：每日 10:00–22:00）"], ["contactEmail", "客服 Email"]];
+  const F: [Exclude<keyof ShopInfo, "banners" | "announcement">, string][] = [["lineUrl", "LINE 客服連結（可使用個人帳號）"], ["igUrl", "Instagram 連結（私訊店長按鈕會轉為 IG 對話入口）"], ["serviceHours", "客服時間（例：每日 10:00–22:00）"], ["contactEmail", "客服 Email"]];
   return (
     <form className="space-y-2 rounded-lg border border-border bg-card p-4" onSubmit={async (e) => {
       e.preventDefault();

@@ -7,7 +7,7 @@ import shrine from '@/assets/omikuji-shrine.jpg';
 import type { Machine } from '@/lib/gacha.functions';
 import { FREE_SHIP_AMOUNT, SHIP_FEE, shippingProgress } from '@/lib/shipping';
 import boutique from '@/assets/gacha-boutique.jpg';
-import { FulfillmentBadge } from './fulfillment';
+import { DispatchNotice, FulfillmentBadge } from './fulfillment';
 
 export function BannerCarousel({ images, onSets, onGuide }: { images: string[]; onSets: () => void; onGuide: () => void }) {
   const [index, setIndex] = useState(0);
@@ -96,7 +96,8 @@ export function SetPopup({ machine, busy, onClose, onBuy }: { machine: Machine; 
     <div className="flex items-baseline justify-between border-t border-border pt-3"><span className="text-sm">全套收藏價</span><span className="text-2xl font-bold text-primary">NT${machine.setPrice}</span></div>
     {regular > machine.setPrice && <p className="mt-1 text-right text-xs text-muted-foreground">單抽合計 NT${regular}・整套省 NT${regular - machine.setPrice}</p>}
     <ShippingProgress subtotal={machine.setPrice} />
-    <p className="mb-3 text-xs leading-relaxed text-muted-foreground">確認後直接前往收件資料；若已有倉庫商品，會一併結帳寄出。請於 24 小時內完成出貨申請。</p>
+    <DispatchNotice items={[machine]} />
+    <p className="mb-3 mt-3 text-xs leading-relaxed text-muted-foreground">確認後直接前往收件資料；若已有倉庫商品，會一併結帳寄出。請於 24 小時內完成出貨申請。</p>
     <Button className="h-12 w-full rounded-full" disabled={busy || !available} onClick={onBuy}><ShoppingBag />{busy ? '正在確認庫存…' : available ? '確認整套・填寫寄送資料' : '部分款式已售完'}</Button>
   </section></div>;
 }

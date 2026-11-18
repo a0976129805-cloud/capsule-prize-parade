@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dispatchSummary, validDispatchDate, preorderConfirmed } from '@/lib/fulfillment';
+import { dispatchSummary, formatDispatchDate, fulfillmentLabel, validDispatchDate, preorderConfirmed } from '@/lib/fulfillment';
 import { groupVaultItems } from '@/lib/vault-groups';
 
 describe('preorder dispatch', () => {
@@ -18,6 +18,13 @@ describe('preorder dispatch', () => {
   it('rejects nonexistent calendar dates', () => {
     expect(validDispatchDate('2026-02-30')).toBe(false);
     expect(validDispatchDate('2026-11-25')).toBe(true);
+  });
+  it('shows the owner dispatch date clearly without promising stock shipment within 24 hours', () => {
+    expect(formatDispatchDate('2026-11-25')).toBe('11月25日');
+    expect(formatDispatchDate('2026-11-25', true)).toBe('2026年11月25日');
+    expect(fulfillmentLabel({ fulfillmentType: 'preorder', dispatchDate: '2026-11-25' })).toBe('日本預購・預計 11月25日 出貨');
+    expect(fulfillmentLabel({ fulfillmentType: 'stock' })).toBe('台灣現貨・店長安排寄送');
+    expect(fulfillmentLabel({ fulfillmentType: 'stock' })).not.toContain('24');
   });
   it('keeps matching prizes with different dispatch snapshots separate', () => {
     const item = { vaultId: '1', id: 'cat', name: 'cat', image: '', machineTitle: '', price: 100, drawnAt: '' };

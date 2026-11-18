@@ -10,8 +10,16 @@ export function dispatchSummary(items: readonly Fulfillment[]) {
   return { hasPreorder: preorders.length > 0, dispatchDate: dates.at(-1) ?? null };
 }
 
+export function formatDispatchDate(value: string | null | undefined, withYear = false) {
+  if (!value || !validDispatchDate(value)) return '待店長確認';
+  const [year, month, day] = value.split('-').map(Number);
+  return withYear ? `${year}年${month}月${day}日` : `${month}月${day}日`;
+}
+
 export function fulfillmentLabel(item: Fulfillment) {
-  return item.fulfillmentType === 'preorder' ? `日本預購・預計 ${item.dispatchDate || '待店長確認'} 出貨` : '台灣現貨';
+  if (item.fulfillmentType !== 'preorder') return '台灣現貨・店長安排寄送';
+  const date = formatDispatchDate(item.dispatchDate);
+  return date === '待店長確認' ? '日本預購・出貨日待店長確認' : `日本預購・預計 ${date} 出貨`;
 }
 
 export function preorderConfirmed(summary: ReturnType<typeof dispatchSummary>, agreed: boolean) {
