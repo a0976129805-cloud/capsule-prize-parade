@@ -50,6 +50,8 @@ import { ContactShortcut } from '@/components/boutique/contact-shortcut';
 import { ORDER_STATUSES } from '@/lib/order-shipping';
 import { copyText } from '@/lib/machine-share';
 import { filterMachines, dailyPick, taipeiDay, type MachineFilter } from '@/lib/machine-filters';
+import { GashaponImport, ImportNotice } from '@/components/boutique/gashapon-import';
+import type { GashaponDraft } from '@/lib/gashapon-import';
 import { CatAlbum, albumQueryKey } from "@/components/boutique/cat-album";
 import { cardLabel } from "@/lib/cat-cards";
 import { useQueryClient } from "@tanstack/react-query";
@@ -577,7 +579,15 @@ function AdminOrderControls({ order, onSaved, flash }: { order: Order; onSaved: 
 
 function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () => Promise<void>; flash: (m: string) => void }) {
   const [view, setView] = useState<"machines" | "groups" | "sales" | "orders" | "seller" | "shop" | "rewards">("machines");
-  const [edit, setEdit] = useState<Machine | null>(null);
+  const [edit, setEditState] = useState<Machine | null>(null);
+  const [imported, setImported] = useState<GashaponDraft | null>(null);
+  const setEdit: typeof setEditState = (next) => { setEditState(next); if (next === null) setImported(null); };
+  const startImport = (draft: GashaponDraft) => {
+    const stamp = Date.now();
+    setEditState({ id: "m" + stamp, title: draft.title, price: 0, totalStock: 0, setPrice: 0, coverImage: draft.cover, status: "熱烈販售中", items: draft.items.map((it, i) => ({ id: `i${stamp}${i}${Math.random().toString(36).slice(2, 6)}`, name: it.name, image: it.image, stock: 0 })) });
+    setImported(draft);
+    flash("已帶入萬代官網資料，請填售價與庫存");
+  };
   const [orders, setOrders] = useState<Order[]>([]);
   const [ostat, setOstat] = useState("待出貨");
   const [fulfillmentFilter, setFulfillmentFilter] = useState("all");
@@ -594,6 +604,7 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
   const save = async () => {
     if (!edit) return;
     if (!edit.title.trim()) return flash("請輸入名稱");
+    if (imported && !(edit.price > 0)) return flash("請輸入台幣單價");
     if (edit.fulfillmentType === 'preorder' && !validDispatchDate(edit.dispatchDate ?? '')) return flash("請設定預計出貨日期");
     try { await saveM({ data: edit }); } catch { return flash("儲存失敗"); }
     setEdit(null); reload(); flash("已儲存");
@@ -614,7 +625,8 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
   if (edit) return (
     <div className="space-y-3">
       <Button variant="bare" size="bare" onClick={() => setEdit(null)} className="flex items-center gap-1 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" /> 返回</Button>
-      <h2 className="text-lg font-bold">編輯扭蛋機</h2>
+      <h2 className="text-lg font-bold">{imported ? "匯入新扭蛋機" : "編輯扭蛋機"}</h2>
+      {imported && <ImportNotice draft={imported} />}
       <input className={field} placeholder="名稱" value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} />
       <div className="grid grid-cols-2 gap-2">
         <label className="text-xs">單價<input type="number" className={field} value={edit.price} onChange={(e) => setEdit({ ...edit, price: +e.target.value })} /></label>
@@ -660,6 +672,7 @@ function Admin({ machines, reload, flash }: { machines: Machine[]; reload: () =>
         <>
           <Button variant="bare" size="bare" onClick={() => setEdit({ id: "m" + Date.now(), title: "", price: 100, totalStock: 0, setPrice: 0, coverImage: "", status: "熱烈販售中", items: [] })}
             className="flex w-full items-center justify-center gap-1 rounded-full bg-primary py-2.5 font-bold text-primary-foreground"><Plus className="h-4 w-4" /> 新增扭蛋機</Button>
+          <GashaponImport onImported={startImport} flash={flash} />
           <MachineOrderList machines={machines} reload={reload} flash={flash} onEdit={setEdit} onDelete={async (id) => { if (confirm('確定刪除？')) { await delM({ data: { id } }); await reload(); } }} />
         </>
       ) : (
