@@ -42,7 +42,7 @@ export const adminImportGashapon = createServerFn({ method: "POST" })
     for (let i = 0; i < unique.length; i += 6) {
       const batch = unique.slice(i, i + 6);
       const urls = await Promise.all(batch.map((src) => copy(src).catch(() => "")));
-      batch.forEach((src, j) => copied.set(src, urls[j]));
+      batch.forEach((src, j) => copied.set(src, urls[j] ?? ""));
     }
     return { ...draft, cover: copied.get(draft.cover) ?? "", items: draft.items.map((it) => ({ ...it, image: copied.get(it.image) ?? "" })) };
   });

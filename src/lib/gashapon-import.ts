@@ -29,12 +29,12 @@ const decode = (s: string) => s
 
 const meta = (html: string, prop: string) => {
   const m = html.match(new RegExp(`<meta[^>]+property=["']og:${prop}["'][^>]+content=["']([^"']*)["']`, 'i'));
-  return m ? decode(m[1]) : '';
+  return m ? decode(m[1] ?? '') : '';
 };
 
 function details(html: string) {
   const out = new Map<string, string>();
-  for (const m of html.matchAll(/<dt[^>]*>([\s\S]*?)<\/dt>\s*<dd[^>]*>([\s\S]*?)<\/dd>/gi)) out.set(decode(m[1]), decode(m[2]));
+  for (const m of html.matchAll(/<dt[^>]*>([\s\S]*?)<\/dt>\s*<dd[^>]*>([\s\S]*?)<\/dd>/gi)) out.set(decode(m[1] ?? ''), decode(m[2] ?? ''));
   return out;
 }
 
@@ -49,22 +49,23 @@ export function parseGashaponHtml(html: string, sourceUrl: string): GashaponDraf
   if (model) {
     const re = new RegExp(`<img[^>]+src=["'](${IMAGE_HOST.replace(/[.]/g, '\\.')}bc/img/model/xl/${model}_(\\d+)\\.(?:jpg|png))["'][^>]*>`, 'gi');
     for (const m of html.matchAll(re)) {
-      if (m[2] === '1' || seen.has(m[1])) continue;
-      seen.add(m[1]);
+      const src = m[1] ?? '';
+      if (!src || m[2] === '1' || seen.has(src)) continue;
+      seen.add(src);
       const name = decode(m[0].match(/title=["']([^"']*)["']/i)?.[1] ?? '');
       if (name) named++;
-      items.push({ name: name || `款式 ${items.length + 1}`, image: m[1] });
+      items.push({ name: name || `款式 ${items.length + 1}`, image: src });
     }
   }
   const d = details(html);
   const yen = (d.get('価格(税込)') ?? '').replace(/[,，]/g, '').match(/(\d+)\s*円/);
   const count = (d.get('種類数') ?? '').match(/(\d+)/);
-  const styleCount = count ? +count[1] : null;
+  const styleCount = count ? Number(count[1]) : null;
   const stylesFromPage = named > 0;
   if (!stylesFromPage) items = Array.from({ length: Math.min(styleCount ?? 1, 60) }, (_, i) => ({ name: `款式 ${i + 1}`, image: cover }));
   return {
     title, cover, items, stylesFromPage,
-    yenPrice: yen ? +yen[1] : null,
+    yenPrice: yen ? Number(yen[1]) : null,
     styleCount,
     release: d.get('発売時期') ?? '',
     sourceUrl,
