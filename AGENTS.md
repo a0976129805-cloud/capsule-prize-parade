@@ -34,3 +34,4 @@
 - Compute sales summaries from non-cancelled order item snapshots, separating collected orders and excluding gifts and shipping; never infer set purchases from duplicate-free contents because historical orders lack purchase-mode snapshots.
 - Return group participant contacts only through an owner-session-checked, no-store server function; public group data remains anonymous counts only.
 - Derive featured-machine filters from the owner's ordered in-stock homepage selection; never auto-rank the public storefront by sales.
+- Build owner social post drafts in a browser-only helper from stored machine facts (price, styles, stock-based set availability, fulfillment date); drafts stay editable and never invent sales, scarcity or ship promises.

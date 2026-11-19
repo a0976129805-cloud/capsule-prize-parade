@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useServerFn } from '@tanstack/react-start';
-import { ArrowUp, ArrowDown, ArrowUpToLine, Check, Undo2, Edit3, Trash2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowUpToLine, Check, Undo2, Edit3, Trash2, Megaphone } from 'lucide-react';
+import { SocialCopyDialog } from '@/components/boutique/social-copy-dialog';
 import { Button } from '@/components/ui/button';
 import { adminReorderMachines, type Machine } from '@/lib/gacha.functions';
 import { moveMachine, type OrderMove } from '@/lib/machine-order';
@@ -12,6 +13,7 @@ export function MachineOrderList({ machines, reload, flash, onEdit, onDelete }: 
   const reorder = useServerFn(adminReorderMachines);
   const [draft, setDraft] = useState<{ ids: string[]; expected: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [social, setSocial] = useState<Machine | null>(null);
   const ids = machines.map((m) => m.id);
   const ordered = draft ? draft.ids.flatMap((id) => { const m = machines.find((m) => m.id === id); return m ? [m] : []; }) : machines;
   const move = (id: string, direction: OrderMove) => setDraft((previous) => ({
@@ -47,9 +49,11 @@ export function MachineOrderList({ machines, reload, flash, onEdit, onDelete }: 
         <Button variant="secondary" size="icon" title="移到最前" aria-label={`移到最前 ${m.title}`} disabled={busy || index === 0} onClick={() => move(m.id, 'top')}><ArrowUpToLine /></Button>
         <Button variant="ghost" size="icon" title="上移一台" aria-label={`上移 ${m.title}`} disabled={busy || index === 0} onClick={() => move(m.id, 'up')}><ArrowUp /></Button>
         <Button variant="ghost" size="icon" title="下移一台" aria-label={`下移 ${m.title}`} disabled={busy || index === ordered.length - 1} onClick={() => move(m.id, 'down')}><ArrowDown /></Button>
-        <Button variant="ghost" size="icon" className="ml-auto" title="編輯機台" aria-label={`編輯 ${m.title}`} disabled={busy || !!draft} onClick={() => onEdit(m)}><Edit3 /></Button>
+        <Button variant="outline" size="sm" className="ml-auto rounded-full" title="產生社群文案" aria-label={`社群文案 ${m.title}`} onClick={() => setSocial(m)}><Megaphone />文案</Button>
+        <Button variant="ghost" size="icon" title="編輯機台" aria-label={`編輯 ${m.title}`} disabled={busy || !!draft} onClick={() => onEdit(m)}><Edit3 /></Button>
         <Button variant="ghost" size="icon" className="text-destructive" title="刪除機台" aria-label={`刪除 ${m.title}`} disabled={busy || !!draft} onClick={() => onDelete(m.id)}><Trash2 /></Button>
       </div>
     </article>)}
+    <SocialCopyDialog machine={social} onClose={() => setSocial(null)} flash={flash} />
   </section>;
 }
