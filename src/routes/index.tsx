@@ -44,6 +44,7 @@ import { GroupBuyBadge, GroupBuyBoard, GroupBuyAdmin } from "@/components/boutiq
 import { SalesDashboard } from '@/components/boutique/sales-dashboard';
 import { BrandNote } from '@/components/boutique/brand-note';
 import { NewcomerInvite } from '@/components/boutique/newcomer-invite';
+import { HowItWorks } from '@/components/boutique/how-it-works';
 import { ShopAnnouncement } from '@/components/boutique/shop-announcement';
 import { MachineShareButton } from '@/components/boutique/machine-share-button';
 import { ContactShortcut } from '@/components/boutique/contact-shortcut';
@@ -314,6 +315,7 @@ export function Storefront({ initialTab = "home", initialQuery = "", initialMach
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
             <ShopAnnouncement text={info.announcement} />
             <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
+            <HowItWorks />
             <HomeDiscovery query={query} onQueryChange={setQuery} onSearch={searchFromHome} />
             <NewcomerInvite onOpen={() => go('coupons')} />
             <DrawFeed machines={machines} />
