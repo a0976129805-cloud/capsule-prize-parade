@@ -37,7 +37,7 @@ import { PromoCodeAdmin } from '@/components/boutique/promo-code-admin';
 import { useMember } from '@/components/boutique/member-session';
 import { getMemberContact } from '@/lib/member-contact.functions';
 import { bestCoupon, couponDiscount, nextCoupon, usableCoupon } from '@/lib/rewards';
-import { HomeDiscovery } from '@/components/boutique/home-discovery';
+import { HomeSearch, PromoCodeEntry } from '@/components/boutique/home-discovery';
 import { MachineSearch } from '@/components/boutique/machine-search';
 import catLogo from "@/assets/cat-logo.png";
 import { GroupBuyBadge, GroupBuyBoard, GroupBuyAdmin } from "@/components/boutique/group-buy";
@@ -314,13 +314,8 @@ export function Storefront({ initialTab = "home", initialQuery = "", initialMach
           <div className="space-y-4">
             {tab === "home" ? <>
             <BannerCarousel images={info.banners || []} onSets={() => go('sets')} onGuide={() => setMenu(true)} />
-            <ShopAnnouncement text={info.announcement} />
-            <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
-            <HowItWorks />
-            <HomeDiscovery query={query} onQueryChange={setQuery} onSearch={searchFromHome} />
-            <NewcomerInvite onOpen={() => go('coupons')} />
-            <DrawFeed machines={machines} />
-            <div className="flex items-center justify-between pt-1"><div><p className="text-xs text-secondary-foreground">今日のおすすめ</p><h2 className="text-lg font-bold">店長精選</h2></div><AlbumProgress deviceId={deviceId} onOpen={() => setAlbumOpen(true)} /></div>
+            <HomeSearch query={query} onQueryChange={setQuery} onSearch={searchFromHome} />
+            <div className="flex items-center justify-between"><div><p className="text-xs text-secondary-foreground">今日のおすすめ</p><h2 className="text-lg font-bold">店長精選</h2></div><AlbumProgress deviceId={deviceId} onOpen={() => setAlbumOpen(true)} /></div>
             </> : <>
             <div className="border-b border-border pb-3"><p className="text-xs text-secondary-foreground">ガチャ売り場</p><h1 className="mt-1 text-2xl font-bold">全部扭蛋機</h1></div>
             <MachineSearch id="machine-search" value={query} onChange={updateMachineQuery} />
@@ -348,7 +343,15 @@ export function Storefront({ initialTab = "home", initialQuery = "", initialMach
             </div>
             {tab === 'machines' && !loading && !loadError && machines.length > 0 && visibleMachines.length === 0 && <div className="space-y-3 rounded-lg border border-dashed border-primary/50 bg-card p-5 text-center"><img src={catLogo} alt="" className="mx-auto h-14 w-14 object-contain" /><p className="font-bold">{query.trim() ? `目前還沒有「${query.trim()}」` : '找不到符合的機台'}</p><p className="text-xs text-muted-foreground">把名稱或截圖私訊給店長，我在日本扭蛋店幫你找找看。</p>{info.igUrl && <a href={info.igUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground"><Instagram className="h-4 w-4" />私訊店長許願</a>}<Button variant="outline" size="sm" onClick={()=>{setTag('all');setQuery('');}}>清除搜尋</Button></div>}
             {tab === "home" && machines.length > 0 && <Button variant="outline" className="h-auto w-full flex-col gap-0.5 rounded-full border-primary/40 bg-card py-3 font-bold shadow-sm" onClick={() => go('machines')}><span>逛逛全部扭蛋機 →</span><span className="text-[11px] font-normal text-muted-foreground">日本直送・共 {machines.length} 台機台等你探索</span></Button>}
-            {tab === 'home' && <BrandNote igUrl={info.igUrl} />}
+            {tab === 'home' && <>
+              <TrustStrip onDaily={() => { sessionStorage.setItem('omikuji-auto', '1'); go('coupons'); }} />
+              <ShopAnnouncement text={info.announcement} />
+              <NewcomerInvite onOpen={() => go('coupons')} />
+              <PromoCodeEntry />
+              <HowItWorks />
+              <DrawFeed machines={machines} />
+              <BrandNote igUrl={info.igUrl} />
+            </>}
             {tab === "home" && <StorefrontFaq lineUrl={info.lineUrl} contactEmail={info.contactEmail} />}
           </div>
         )}

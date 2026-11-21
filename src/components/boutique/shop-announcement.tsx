@@ -1,19 +1,24 @@
-import { Megaphone } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, Megaphone } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
+/** Owner news shown as a slim strip; long text expands on demand instead of taking over the page. */
 export function ShopAnnouncement({ text }: { text: string }) {
-  if (!text.trim()) return null;
+  const [open, setOpen] = useState(false);
+  const body = text.trim();
+  if (!body) return null;
+  const long = body.length > 40 || body.includes('\n');
   return (
-    <section aria-label="店長採購與出貨公告" className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card px-4 py-3 shadow-sm">
-      <span aria-hidden="true" className="absolute -right-5 -top-6 h-20 w-20 rounded-full border-[14px] border-secondary/40" />
-      <div className="relative flex gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-          <Megaphone className="h-4 w-4" aria-hidden="true" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold tracking-[0.18em] text-secondary-foreground">店長からのおたより</p>
-          <h2 className="mt-0.5 text-sm font-bold">日本採購・出貨近況</h2>
-          <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">{text}</p>
+    <section aria-label="店長採購與出貨公告" className="rounded-lg border border-primary/20 bg-card px-3 py-2.5">
+      <div className="flex gap-2.5">
+        <Megaphone className="mt-0.5 h-4 w-4 shrink-0 text-secondary-foreground" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[11px] font-bold text-secondary-foreground">店長近況・日本採購與出貨</h2>
+          <p className={`mt-0.5 whitespace-pre-wrap break-words text-sm leading-relaxed ${open ? '' : 'line-clamp-1'}`}>{body}</p>
         </div>
+        {long && <Button variant="bare" size="bare" aria-expanded={open} aria-label={open ? '收合公告' : '展開公告全文'} onClick={() => setOpen((v) => !v)} className="h-8 w-8 shrink-0 justify-center rounded-full text-muted-foreground hover:bg-muted">
+          <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </Button>}
       </div>
     </section>
   );
