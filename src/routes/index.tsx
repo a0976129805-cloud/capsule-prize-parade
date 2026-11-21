@@ -340,6 +340,7 @@ export function Storefront({ initialTab = "home", initialQuery = "", initialMach
                   <p className="line-clamp-2 min-h-[2.5em] whitespace-normal break-words text-xs font-bold leading-[1.25]" title={m.title}>{m.title}</p>
                   <FulfillmentBadge item={m} />
                   <p className="mt-0.5 text-[10px] text-muted-foreground">全 {m.items.length} 種・剩餘 {m.totalStock} 顆</p>
+                  {m.setPrice > 0 && m.items.length > 0 && m.items.every((i) => i.stock > 0) && <span className="mt-1 inline-block rounded-full border border-secondary-foreground/40 px-2 py-0.5 text-[10px] font-bold text-secondary-foreground">全 {m.items.length} 款・可整套購買</span>}
                 </div>
               </Button>
             ))}
