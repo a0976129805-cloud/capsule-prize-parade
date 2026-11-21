@@ -48,7 +48,7 @@ import { HowItWorks } from '@/components/boutique/how-it-works';
 import { ShopAnnouncement } from '@/components/boutique/shop-announcement';
 import { MachineShareButton } from '@/components/boutique/machine-share-button';
 import { ContactShortcut } from '@/components/boutique/contact-shortcut';
-import { ORDER_STATUSES } from '@/lib/order-shipping';
+import { ORDER_STATUSES, shipmentCopyText } from '@/lib/order-shipping';
 import { copyText } from '@/lib/machine-share';
 import { filterMachines, dailyPick, taipeiDay, type MachineFilter } from '@/lib/machine-filters';
 import { GashaponImport, ImportNotice } from '@/components/boutique/gashapon-import';
@@ -59,6 +59,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Coins, Sparkles, Package, ShoppingBag, Settings, ArrowLeft,
   Plus, Trash2, Edit3, Check, Truck, Download, RefreshCw, MapPin, Search, X, AlertTriangle, Menu, Upload, MessageCircle, Instagram, BookOpen, ShieldCheck, Lock, Share2, Gift, Volume2, VolumeX, ZoomIn,
+  ClipboardCopy,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -570,8 +571,12 @@ function AdminOrderControls({ order, onSaved, flash }: { order: Order; onSaved: 
       flash(error instanceof Error ? error.message : '更新失敗，請再試一次');
     } finally { setBusy(false); }
   };
+  const copyShipment = async () => {
+    try { await copyText(shipmentCopyText(order)); flash('已複製寄件資訊，可貼到賣貨便'); } catch { flash('複製失敗，請長按文字手動複製'); }
+  };
   return (
     <div className="mt-3 space-y-2 border-t border-border pt-3">
+      <Button type="button" variant="outline" size="sm" onClick={copyShipment} className="w-full rounded-full"><ClipboardCopy aria-hidden="true" />複製寄件資訊（姓名・電話・門市・金額）</Button>
       <label className="block text-xs font-bold">7-11 賣貨便物流編號<input aria-label={`訂單 ${order.id} 物流編號`} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm uppercase" maxLength={40} placeholder="實際寄出後填寫" value={trackingNumber} onChange={(event) => setTrackingNumber(event.target.value)} /></label>
       <Button type="button" size="sm" disabled={busy || !trackingNumber.trim()} onClick={() => save('已出貨')} className="w-full rounded-full"><Truck aria-hidden="true" />儲存單號並標為已出貨</Button>
       <div className="flex flex-wrap gap-1">{ORDER_STATUSES.map((status) => <Button type="button" variant="bare" size="bare" disabled={busy} key={status} onClick={() => save(status)} className={`rounded-full px-3 py-1 text-xs font-bold ${order.status === status ? `st-${status}` : 'bg-muted text-muted-foreground'}`}>{status}</Button>)}</div>

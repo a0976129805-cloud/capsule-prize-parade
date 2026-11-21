@@ -13,3 +13,19 @@ export function validateShipment(status: string, trackingNumber: string) {
   if (status === '已出貨' && !trackingNumber) throw new Error('標為已出貨前，請先填寫物流編號');
   return trackingNumber;
 }
+
+export type ShippingCopyOrder = {
+  id: string;
+  total: number;
+  shipping: { name: string; phone: string; storeName: string; storeCode: string };
+};
+
+export function shipmentCopyText(order: ShippingCopyOrder) {
+  return [
+    `收件人：${order.shipping.name}`,
+    `電話：${order.shipping.phone}`,
+    `門市：${order.shipping.storeName}（${order.shipping.storeCode}）`,
+    `代收金額：NT$${order.total}`,
+    `訂單編號：${order.id}`,
+  ].join('\n');
+}
